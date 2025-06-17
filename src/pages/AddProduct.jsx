@@ -75,7 +75,7 @@ const AddProduct = () => {
           />
         </div>
 
-        <div className="mb-4">
+{/*         <div className="mb-4">
           <label htmlFor="image" className="block text-sm font-semibold">Product Image</label>
           <input
             type="file"
@@ -86,7 +86,47 @@ const AddProduct = () => {
             onChange={handleImageChange}
             required
           />
-        </div>
+        </div> */}
+
+
+        <div className="mb-4">
+  <label className="block text-sm font-semibold mb-1">Product Image</label>
+
+  {/* 📸 Camera Button */}
+  <input
+    type="file"
+    accept="image/*"
+    capture="environment"
+    onChange={handleImageChange}
+    id="cameraInput"
+    style={{ display: 'none' }}
+  />
+  <button
+    type="button"
+    onClick={() => document.getElementById('cameraInput').click()}
+    className="w-full p-2 mb-2 bg-green-500 text-white rounded-md"
+  >
+    📸 Take Photo
+  </button>
+
+  {/* 🖼 Gallery/File Button */}
+  <input
+    type="file"
+    accept="image/*"
+    onChange={handleImageChange}
+    id="fileInput"
+    style={{ display: 'none' }}
+  />
+  <button
+    type="button"
+    onClick={() => document.getElementById('fileInput').click()}
+    className="w-full p-2 bg-blue-500 text-white rounded-md"
+  >
+    🖼 Upload from Gallery
+  </button>
+</div>
+
+        
 
         {image && (
           <div className="mb-4">
