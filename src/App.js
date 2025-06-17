@@ -9,7 +9,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Checkout from './pages/Checkout';
 import AdminDashboard from './pages/AdminDashboard';
-import AddProduct from './pages/AddProduct';  {/* Updated path */}
+import AddProduct from './pages/AddProduct'; 
 
 
 
@@ -38,25 +38,3 @@ const App = () => {
 
 export default App;
 
-// const App = () => {
-//   return (
-//     <Router>
-//       <Navbar />
-//       <main className="min-h-screen bg-gray-100">
-//         <Routes>
-//           <Route path="/" element={<Home />} />
-//           <Route path="/product/:id" element={<ProductDetail />} />
-//           <Route path="/cart" element={<Cart />} />
-//           <Route path="/login" element={<Login />} />
-//           <Route path="/register" element={<Register />} />
-//           <Route path="/checkout" element={<Checkout />} />
-//           <Route path="/admin" element={<AdminDashboard />} />
-//           <Route path="/admin/add-product" element={<AddProduct />} />  {/* Updated path */}
-//         </Routes>
-//       </main>
-//       <Footer />
-//     </Router>
-//   );
-// };
-
-// export default App;
