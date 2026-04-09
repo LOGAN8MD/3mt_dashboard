@@ -197,7 +197,7 @@ const AddProduct = () => {
     });
 
     try {
-            console.log(productData)
+            console.log(productData.images)
       await axios.post('/api/products', productData, {
         headers: {
           'Content-Type': 'multipart/form-data',
