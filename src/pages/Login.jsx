@@ -6,11 +6,13 @@ import { toast } from 'react-hot-toast';
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
     try {
       const role = await login(email, password);
       toast.success('Login successful!');
@@ -21,6 +23,8 @@ const Login = () => {
     } catch (error) {
       console.log(error);
       toast.error('Login failed! Please check credentials.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -59,9 +63,20 @@ const Login = () => {
             
             <button 
               type="submit" 
-              className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl tracking-widest shadow-lg shadow-blue-900/20 transition-all transform hover:-translate-y-0.5 mt-4"
+              disabled={isLoading}
+              className={`w-full py-4 ${isLoading ? 'bg-blue-800 cursor-not-allowed opacity-75' : 'bg-blue-600 hover:bg-blue-700 hover:-translate-y-0.5'} text-white font-bold rounded-xl tracking-widest shadow-lg shadow-blue-900/20 transition-all transform mt-4`}
             >
-              SECURE LOGIN
+              {isLoading ? (
+                <span className="flex items-center justify-center">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  SECURING...
+                </span>
+              ) : (
+                "SECURE LOGIN"
+              )}
             </button>
           </form>
         </div>

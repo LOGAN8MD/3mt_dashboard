@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from '../utils/axiosInstance';
 import { toast } from 'react-hot-toast';
+import { showLoader, hideLoader } from '../utils/loaderState';
 
 const ManageProducts = () => {
   const [products, setProducts] = useState([]);
@@ -11,6 +12,9 @@ const ManageProducts = () => {
   // Modal States
   const [editingProduct, setEditingProduct] = useState(null);
   const [deletingProductId, setDeletingProductId] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Form State for Editing
   const [formData, setFormData] = useState({
@@ -48,6 +52,7 @@ const ManageProducts = () => {
 
   const confirmDelete = async () => {
     if (!deletingProductId) return;
+    setIsDeleting(true);
     try {
       await axios.delete(`/api/products/${deletingProductId}`);
       toast.success('Product deleted successfully');
@@ -56,6 +61,8 @@ const ManageProducts = () => {
     } catch (error) {
       console.error(error);
       toast.error('Failed to delete product');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -109,6 +116,7 @@ const ManageProducts = () => {
     });
 
     try {
+      setIsUpdating(true);
       await axios.put(`/api/products/${editingProduct._id}`, productData);
       toast.success('✅ Product updated successfully!');
       fetchProducts();
@@ -116,19 +124,33 @@ const ManageProducts = () => {
     } catch (error) {
       console.error(error);
       toast.error(error.response?.data?.message || '❌ Failed to update product!');
+    } finally {
+      setIsUpdating(false);
     }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('userInfo');
-    toast.success('Logged out successfully');
-    navigate('/login');
+    showLoader();
+    setTimeout(() => {
+      localStorage.removeItem('userInfo');
+      toast.success('Logged out successfully');
+      hideLoader();
+      navigate('/login');
+    }, 600);
   };
 
   return (
-    <div className="flex h-screen bg-[#1b2128] font-sans text-gray-200 relative">
+    <div className="flex h-screen bg-[#1b2128] font-sans text-gray-200 relative overflow-hidden">
+      {/* Mobile Sidebar Overlay */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-30 md:hidden" 
+          onClick={() => setIsMobileMenuOpen(false)}
+        ></div>
+      )}
+
       {/* Sidebar - Left */}
-      <aside className="w-64 bg-[#0e1726] shadow-xl flex flex-col hidden md:flex h-full border-r border-gray-800">
+      <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-[#0e1726] shadow-xl flex flex-col transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 transition duration-200 ease-in-out border-r border-gray-800`}>
         <div className="p-6 border-b border-gray-800 flex flex-col items-center justify-center">
           <h2 className="text-3xl font-black text-blue-500 tracking-wider">3MT</h2>
           <span className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Machine Tools</span>
@@ -153,8 +175,18 @@ const ManageProducts = () => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden h-full">
         {/* Top Navbar */}
-        <header className="h-16 bg-[#0e1726] border-b border-gray-800 flex items-center justify-between px-6 lg:px-10 z-10 shadow-sm shrink-0">
-          <div className="text-white text-xl font-black tracking-wider md:hidden">3MT<span className="text-blue-500">TOOLS</span></div>
+        <header className="h-16 bg-[#0e1726] border-b border-gray-800 flex items-center justify-between px-4 lg:px-10 z-10 shadow-sm shrink-0">
+          <div className="flex items-center md:hidden">
+            <button 
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="text-gray-400 hover:text-white focus:outline-none mr-3"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+            <div className="text-white text-xl font-black tracking-wider">3MT<span className="text-blue-500">TOOLS</span></div>
+          </div>
           <div className="flex-1"></div>
           <div className="flex items-center space-x-4">
             <div className="text-sm text-gray-400 hidden sm:block mr-2 border-r border-gray-700 pr-4">Admin User</div>
@@ -357,9 +389,21 @@ const ManageProducts = () => {
                   <button type="button" onClick={closeEditModal} className="px-6 py-3 bg-gray-800 hover:bg-gray-700 text-white font-bold rounded-lg transition-colors">
                     Cancel
                   </button>
-                  <button type="submit" className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-lg flex items-center">
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                    Save Changes
+                  <button type="submit" disabled={isUpdating} className={`px-8 py-3 ${isUpdating ? 'bg-blue-800 cursor-not-allowed opacity-75' : 'bg-blue-600 hover:bg-blue-700'} text-white font-bold rounded-lg shadow-lg flex items-center`}>
+                    {isUpdating ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                        Save Changes
+                      </>
+                    )}
                   </button>
                 </div>
               </form>
@@ -389,9 +433,20 @@ const ManageProducts = () => {
               </button>
               <button 
                 onClick={confirmDelete}
-                className="flex-1 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-lg shadow-red-900/20 transition-all"
+                disabled={isDeleting}
+                className={`flex-1 py-3 ${isDeleting ? 'bg-red-800 cursor-not-allowed opacity-75' : 'bg-red-600 hover:bg-red-700'} text-white font-bold rounded-xl shadow-lg shadow-red-900/20 transition-all flex justify-center items-center`}
               >
-                Yes, Delete
+                {isDeleting ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Deleting...
+                  </>
+                ) : (
+                  "Yes, Delete"
+                )}
               </button>
             </div>
           </div>

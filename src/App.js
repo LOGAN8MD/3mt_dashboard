@@ -11,13 +11,13 @@ import Checkout from './pages/Checkout';
 import AdminDashboard from './pages/AdminDashboard';
 import ManageProducts from './pages/ManageProducts';
 import AddProduct from './pages/AddProduct'; 
-
-
+import GlobalSpinner from './components/GlobalSpinner';
 
 const App = () => {
   return (
     <Router>
-      <div className="min-h-screen bg-gray-100 flex flex-col">
+      <div className="min-h-screen bg-gray-100 flex flex-col relative">
+        <GlobalSpinner />
         <Routes>
           {/* Auth Routes */}
           <Route path="/" element={<Navigate to="/login" replace />} />
