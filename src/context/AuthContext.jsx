@@ -41,7 +41,7 @@ export const AuthProvider = ({ children }) => {
       return role;
     } catch (error) {
       console.log('%%%%%%%%%%%%%%%%%%@@@@@@@@@@@@@@@@@@%%%%%%%%%%%%%%%%%%%')
-      console.error('Login failed', error);
+      console.log('Login failed', error);
       throw error;
     }
   };

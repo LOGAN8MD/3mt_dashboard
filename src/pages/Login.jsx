@@ -7,12 +7,14 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
+    setErrorMsg('');
     try {
       const role = await login(email, password);
       toast.success('Login successful!');
@@ -22,7 +24,9 @@ const Login = () => {
        navigate('/home');
     } catch (error) {
       console.log(error);
-      toast.error('Login failed! Please check credentials.');
+      const message = error.response?.data?.message || 'Login failed! Please check credentials.';
+      setErrorMsg(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
@@ -36,6 +40,12 @@ const Login = () => {
             <h1 className="text-5xl font-black text-blue-500 tracking-wider mb-2">3MT</h1>
             <p className="text-gray-400 font-bold tracking-widest uppercase text-sm">Machine Tools Administration</p>
           </div>
+          
+          {errorMsg && (
+            <div className="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-3 rounded-xl mb-6 text-sm font-bold text-center shadow-inner">
+              {errorMsg}
+            </div>
+          )}
           
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
