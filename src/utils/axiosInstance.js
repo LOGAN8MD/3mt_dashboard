@@ -2,7 +2,7 @@ import axios from 'axios';
 import { showLoader, hideLoader } from './loaderState';
 
 const axiosInstance = axios.create({
-  // baseURL: 'http://localhost:8080',  // Update with your backend URL
+  //  baseURL: 'http://localhost:8080',  // Update with your backend URL
   baseURL:'https://threemt-server.onrender.com',
 });
 

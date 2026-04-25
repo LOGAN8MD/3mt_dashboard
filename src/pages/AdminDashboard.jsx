@@ -10,6 +10,7 @@ const AdminDashboard = () => {
   
   // Modal State
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   const navigate = useNavigate();
@@ -137,7 +138,10 @@ const AdminDashboard = () => {
                       {products.map((product) => (
                         <tr 
                           key={product._id} 
-                          onClick={() => setSelectedProduct(product)}
+                          onClick={() => {
+                            setSelectedProduct(product);
+                            setActiveImageIndex(0);
+                          }}
                           className="hover:bg-blue-600/10 transition duration-150 cursor-pointer"
                         >
                           <td className="px-6 py-4">
@@ -173,31 +177,37 @@ const AdminDashboard = () => {
           
           {/* Detailed View Modal */}
           {selectedProduct && (
-            <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 overflow-y-auto" onClick={closeModal}>
+            <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4" onClick={closeModal}>
               <div 
-                className="bg-[#0e1726] border border-gray-700 rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden mt-10 mb-10"
+                className="bg-[#0e1726] border border-gray-700 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden"
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Modal Header */}
-                <div className="px-6 py-4 border-b border-gray-800 flex justify-between items-center bg-[#1b2128]">
+                <div className="px-6 py-4 border-b border-gray-800 flex justify-between items-center bg-[#1b2128] shrink-0">
                   <h3 className="text-xl font-bold text-white">Product Details</h3>
                   <button onClick={closeModal} className="text-gray-400 hover:text-white transition-colors text-2xl font-bold bg-transparent border-none cursor-pointer">×</button>
                 </div>
                 
                 {/* Modal Body */}
-                <div className="p-6 md:p-8">
+                <div className="p-6 md:p-8 overflow-y-auto custom-scrollbar">
                    <div className="flex flex-col md:flex-row gap-8">
                       {/* Left: Images */}
                       <div className="w-full md:w-1/2 space-y-4">
                          {selectedProduct.images && selectedProduct.images.length > 0 ? (
                            <div className="space-y-4">
                              {/* Main Image */}
-                             <img src={selectedProduct.images[0].url} alt="Main Preview" className="w-full h-80 object-cover rounded-xl border border-gray-800 shadow-md" />
+                             <img src={selectedProduct.images[activeImageIndex]?.url || selectedProduct.images[0].url} alt="Main Preview" className="w-full h-80 object-cover rounded-xl border border-gray-800 shadow-md transition-all duration-300" />
                              {/* Thumbnails */}
                              {selectedProduct.images.length > 1 && (
-                               <div className="flex gap-2 overflow-x-auto pb-2">
-                                 {selectedProduct.images.slice(1).map((img, idx) => (
-                                   <img key={idx} src={img.url} alt={`Preview ${idx+1}`} className="w-20 h-20 object-cover rounded-lg border border-gray-700" />
+                               <div className="flex gap-2 overflow-x-auto pb-2 custom-scrollbar">
+                                 {selectedProduct.images.map((img, idx) => (
+                                   <img 
+                                     key={idx} 
+                                     src={img.url} 
+                                     alt={`Preview ${idx+1}`} 
+                                     onClick={() => setActiveImageIndex(idx)}
+                                     className={`w-20 h-20 object-cover rounded-lg border cursor-pointer transition-all shrink-0 ${activeImageIndex === idx ? 'border-blue-500 ring-2 ring-blue-500 opacity-100' : 'border-gray-700 opacity-50 hover:opacity-100'}`} 
+                                   />
                                  ))}
                                </div>
                              )}
