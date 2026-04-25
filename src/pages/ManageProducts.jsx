@@ -166,9 +166,9 @@ const ManageProducts = () => {
           <Link to="/admin/add-product" className="flex items-center px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg font-medium transition-colors border-l-4 border-transparent hover:border-gray-500">
             Add Product
           </Link>
-          <Link to="/admin/orders" className="flex items-center px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg font-medium transition-colors border-l-4 border-transparent hover:border-gray-500">
+          {/* <Link to="/admin/orders" className="flex items-center px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg font-medium transition-colors border-l-4 border-transparent hover:border-gray-500">
             View Orders
-          </Link>
+          </Link> */}
         </nav>
       </aside>
 
