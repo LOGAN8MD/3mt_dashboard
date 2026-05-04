@@ -320,13 +320,13 @@ const AddProduct = () => {
                     >
                       <option value="" className="text-gray-500">Select Type</option>
                       <option value="machine">Machine</option>
+                      <option value="accessory">Accessory</option>
                       <option value="part">Part</option>
                       <option value="tool">Tool</option>
-                      <option value="accessory">Accessory</option>
                       <option value="spare">Spare</option>
                     </select>
                   </div>
-
+                
                   {/* Category */}
                   <div>
                     <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Category</label>
