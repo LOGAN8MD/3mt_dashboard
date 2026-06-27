@@ -8,39 +8,30 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);  // to handle loading state
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      // Ideally, you should validate the token on the backend and get user data
-      axios
-        .get('/api/auth/user') // Update the route based on your API
-        .then((response) => {
-          setUser(response.data);  // Assuming response.data is user data
-          setLoading(false);
-        })
-        .catch(() => {
-          localStorage.removeItem('token');
-          setLoading(false);
-        });
-    } else {
-      setLoading(false);
+    const userInfo = localStorage.getItem('userInfo')
+      ? JSON.parse(localStorage.getItem('userInfo'))
+      : null;
+
+    if (userInfo?.token) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${userInfo.token}`;
+      setUser(userInfo);
     }
+
+    setLoading(false);
   }, []);
 
   const login = async (email, password) => {
     try {
       const response = await axios.post('/api/auth/login', { email, password });
-      console.log("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$")
-      console.log(response.data)
-      let role=response.data.role
-      const { token, user } = response.data;  // Assuming response contains token and user data
-      localStorage.setItem('token', token); // Store token in localStorage
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      console.log("@@@@@@@@@@@@@@@@@@@@@@@",role)
-      setUser(user);
-      return role;
+      const userInfo = response.data;
+
+      localStorage.setItem('userInfo', JSON.stringify(userInfo));
+      localStorage.setItem('token', userInfo.token);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${userInfo.token}`;
+      setUser(userInfo);
+
+      return userInfo.role;
     } catch (error) {
-      console.log('%%%%%%%%%%%%%%%%%%@@@@@@@@@@@@@@@@@@%%%%%%%%%%%%%%%%%%%')
       console.log('Login failed', error);
       throw error;
     }
@@ -50,10 +41,12 @@ export const AuthProvider = ({ children }) => {
     try {
       console.log(`Data:`, { name, email, password });
       const response = await axios.post('/api/auth/register', { name, email, password });
-      const { token, user } = response.data;  // Assuming response contains token and user data
-      localStorage.setItem('token', token); // Store token in localStorage
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      setUser(user);
+      const userInfo = response.data;
+
+      localStorage.setItem('userInfo', JSON.stringify(userInfo));
+      localStorage.setItem('token', userInfo.token);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${userInfo.token}`;
+      setUser(userInfo);
     } catch (error) {
       console.error('Registration failed', error);
     }

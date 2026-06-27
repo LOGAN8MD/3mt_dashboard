@@ -12,6 +12,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import ManageProducts from './pages/ManageProducts';
 import AddProduct from './pages/AddProduct'; 
 import GlobalSpinner from './components/GlobalSpinner';
+import ProtectedRoute from './components/ProtectedRoute';
 
 const App = () => {
   return (
@@ -25,9 +26,11 @@ const App = () => {
           <Route path="/register" element={<Register />} />
           
           {/* Admin Routes - standalone dashboard */}
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/admin/manage" element={<ManageProducts />} />
-          <Route path="/admin/add-product" element={<AddProduct />} />
+          <Route element={<ProtectedRoute requireAdmin />}>
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/manage" element={<ManageProducts />} />
+            <Route path="/admin/add-product" element={<AddProduct />} />
+          </Route>
           
           {/* Customer Storefront Routes - wrapped with Navbar and Footer */}
           <Route path="/*" element={
@@ -51,4 +54,3 @@ const App = () => {
 };
 
 export default App;
-

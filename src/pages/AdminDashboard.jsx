@@ -1,129 +1,422 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import axios from '../utils/axiosInstance';
 import { toast } from 'react-hot-toast';
-import { showLoader, hideLoader } from '../utils/loaderState';
+import AdminLayout from '../components/AdminLayout';
+
+const LOW_STOCK_THRESHOLD = 5;
+
+const getUniqueOptions = (products, field) => {
+  const values = products
+    .map((product) => product[field]?.trim())
+    .filter(Boolean);
+
+  return [...new Set(values)].sort((a, b) => a.localeCompare(b));
+};
 
 const AdminDashboard = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
   
   // Modal State
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  
-  const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filters, setFilters] = useState({
+    category: '',
+    type: '',
+    brand: '',
+    stockStatus: '',
+  });
 
   useEffect(() => {
     fetchProducts();
   }, []);
 
   const fetchProducts = async () => {
+    setLoading(true);
+    setErrorMessage('');
+
     try {
       const response = await axios.get('/api/products');
       setProducts(response.data);
-      setLoading(false);
     } catch (error) {
       console.error(error);
-      toast.error('Failed to load products');
+      const message = error.response?.data?.message || 'Failed to load products';
+      setErrorMessage(message);
+      toast.error(message);
+    } finally {
       setLoading(false);
     }
-  };
-
-  const handleLogout = () => {
-    showLoader();
-    setTimeout(() => {
-      localStorage.removeItem('userInfo');
-      toast.success('Logged out successfully');
-      hideLoader();
-      navigate('/login');
-    }, 600);
   };
 
   const closeModal = () => {
     setSelectedProduct(null);
   };
 
+  const inventoryStats = useMemo(() => {
+    const categories = new Set();
+
+    return products.reduce(
+      (stats, product) => {
+        const stock = Number(product.stock) || 0;
+        const category = product.category?.trim();
+
+        if (category) {
+          categories.add(category.toLowerCase());
+        }
+
+        return {
+          totalProducts: stats.totalProducts + 1,
+          inStock: stock > 0 ? stats.inStock + 1 : stats.inStock,
+          lowStock:
+            stock > 0 && stock <= LOW_STOCK_THRESHOLD
+              ? stats.lowStock + 1
+              : stats.lowStock,
+          outOfStock: stock <= 0 ? stats.outOfStock + 1 : stats.outOfStock,
+          totalCategories: categories.size,
+        };
+      },
+      {
+        totalProducts: 0,
+        inStock: 0,
+        lowStock: 0,
+        outOfStock: 0,
+        totalCategories: 0,
+      }
+    );
+  }, [products]);
+
+  const summaryCards = [
+    {
+      label: 'Total Products',
+      value: inventoryStats.totalProducts,
+      accent: 'border-blue-500/40 bg-blue-500/10 text-blue-400',
+    },
+    {
+      label: 'In Stock',
+      value: inventoryStats.inStock,
+      accent: 'border-green-500/40 bg-green-500/10 text-green-400',
+    },
+    {
+      label: 'Low Stock',
+      value: inventoryStats.lowStock,
+      accent: 'border-amber-500/40 bg-amber-500/10 text-amber-400',
+    },
+    {
+      label: 'Out of Stock',
+      value: inventoryStats.outOfStock,
+      accent: 'border-red-500/40 bg-red-500/10 text-red-400',
+    },
+    {
+      label: 'Categories',
+      value: inventoryStats.totalCategories,
+      accent: 'border-cyan-500/40 bg-cyan-500/10 text-cyan-400',
+    },
+  ];
+
+  const filterOptions = useMemo(
+    () => ({
+      categories: getUniqueOptions(products, 'category'),
+      types: getUniqueOptions(products, 'type'),
+      brands: getUniqueOptions(products, 'brand'),
+    }),
+    [products]
+  );
+
+  const handleFilterChange = (field, value) => {
+    setFilters((currentFilters) => ({
+      ...currentFilters,
+      [field]: value,
+    }));
+  };
+
+  const clearFilters = () => {
+    setSearchTerm('');
+    setFilters({
+      category: '',
+      type: '',
+      brand: '',
+      stockStatus: '',
+    });
+  };
+
+  const openProductDetails = (product) => {
+    setSelectedProduct(product);
+    setActiveImageIndex(0);
+  };
+
+  const hasActiveFilters =
+    Boolean(searchTerm.trim()) ||
+    Boolean(filters.category) ||
+    Boolean(filters.type) ||
+    Boolean(filters.brand) ||
+    Boolean(filters.stockStatus);
+
+  const normalizedSearchTerm = searchTerm.trim().toLowerCase();
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      const stock = Number(product.stock) || 0;
+      const categoryMatches =
+        !filters.category || product.category === filters.category;
+      const typeMatches = !filters.type || product.type === filters.type;
+      const brandMatches = !filters.brand || product.brand === filters.brand;
+      const stockMatches =
+        !filters.stockStatus ||
+        (filters.stockStatus === 'inStock' && stock > 0) ||
+        (filters.stockStatus === 'lowStock' &&
+          stock > 0 &&
+          stock <= LOW_STOCK_THRESHOLD) ||
+        (filters.stockStatus === 'outOfStock' && stock <= 0);
+
+      if (!categoryMatches || !typeMatches || !brandMatches || !stockMatches) {
+        return false;
+      }
+
+      if (!normalizedSearchTerm) return true;
+
+      const searchableFields = [
+        product.name,
+        product.brand,
+        product.model,
+        product.category,
+        product.subCategory,
+        product.type,
+        product.size,
+        product.description,
+      ];
+
+      return searchableFields.some((field) =>
+        String(field || '').toLowerCase().includes(normalizedSearchTerm)
+      );
+    });
+  }, [filters, products, normalizedSearchTerm]);
+
   return (
-    <div className="flex h-screen bg-[#1b2128] font-sans text-gray-200 relative overflow-hidden">
-      {/* Mobile Sidebar Overlay */}
-      {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-30 md:hidden" 
-          onClick={() => setIsMobileMenuOpen(false)}
-        ></div>
-      )}
-
-      {/* Sidebar - Left */}
-      <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-[#0e1726] shadow-xl flex flex-col transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 transition duration-200 ease-in-out border-r border-gray-800`}>
-        <div className="p-6 border-b border-gray-800 flex flex-col items-center justify-center">
-          <h2 className="text-3xl font-black text-blue-500 tracking-wider">3MT</h2>
-          <span className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Machine Tools</span>
-        </div>
-        <nav className="flex-1 px-4 py-8 space-y-4">
-          <div className="text-xs uppercase text-gray-500 font-bold tracking-widest pl-3 mb-2">Menu</div>
-          <Link to="/admin" className="flex items-center px-4 py-3 bg-blue-600/10 text-blue-500 rounded-lg font-medium transition-colors border-l-4 border-blue-500">
-             Dashboard
-          </Link>
-          <Link to="/admin/manage" className="flex items-center px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg font-medium transition-colors border-l-4 border-transparent hover:border-gray-500">
-            Manage Products
-          </Link>
-          <Link to="/admin/add-product" className="flex items-center px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg font-medium transition-colors border-l-4 border-transparent hover:border-gray-500">
-            Add Product
-          </Link>
-          {/* <Link to="/admin/orders" className="flex items-center px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg font-medium transition-colors border-l-4 border-transparent hover:border-gray-500">
-            View Orders
-          </Link> */}
-        </nav>
-      </aside>
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden h-full">
-        {/* Top Navbar */}
-        <header className="h-16 bg-[#0e1726] border-b border-gray-800 flex items-center justify-between px-4 lg:px-10 z-10 shadow-sm shrink-0">
-          <div className="flex items-center md:hidden">
-            <button 
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="text-gray-400 hover:text-white focus:outline-none mr-3"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-            <div className="text-white text-xl font-black tracking-wider">3MT<span className="text-blue-500">TOOLS</span></div>
-          </div>
-          <div className="flex-1"></div> {/* Spacer */}
-          <div className="flex items-center space-x-4">
-            <div className="text-sm text-gray-400 hidden sm:block mr-2 border-r border-gray-700 pr-4">Admin User</div>
-            <button 
-              onClick={handleLogout}
-              className="px-5 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-sm font-bold tracking-wide transition-all shadow-sm"
-            >
-              LOGOUT
-            </button>
-          </div>
-        </header>
-
-        {/* Dashboard Content */}
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-[#1b2128] p-6 lg:p-10 relative">
+    <AdminLayout>
           <div className="max-w-7xl mx-auto">
             <div className="flex justify-between items-center mb-8">
               <h1 className="text-3xl font-bold text-white tracking-tight">Overview</h1>
             </div>
 
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 mb-8">
+              {summaryCards.map((card) => (
+                <div
+                  key={card.label}
+                  className="bg-[#0e1726] rounded-xl shadow-lg border border-gray-800 p-5"
+                >
+                  <div className={`w-10 h-10 rounded-lg border flex items-center justify-center mb-4 ${card.accent}`}>
+                    <span className="text-sm font-black">{card.label.charAt(0)}</span>
+                  </div>
+                  <p className="text-xs uppercase tracking-widest font-bold text-gray-500">{card.label}</p>
+                  <p className="text-3xl font-black text-white mt-2">{card.value}</p>
+                </div>
+              ))}
+            </div>
+
             <div className="bg-[#0e1726] rounded-xl shadow-lg border border-gray-800 overflow-hidden">
-              <div className="px-6 py-5 border-b border-gray-800 flex justify-between items-center">
-                <h2 className="text-xl font-bold text-white tracking-wide">All Products ({products.length})</h2>
-                <span className="text-sm text-gray-400">Click any row to view details</span>
+              <div className="px-6 py-5 border-b border-gray-800 space-y-5">
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <h2 className="text-xl font-bold text-white tracking-wide">
+                    All Products ({filteredProducts.length}/{products.length})
+                  </h2>
+                  <span className="text-sm text-gray-400">Click any row to view details</span>
+                </div>
+
+                <div className="relative w-full lg:w-80">
+                  <input
+                    type="search"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Search products..."
+                    className="w-full rounded-lg border border-gray-700 bg-[#1b2128] py-3 pl-10 pr-4 text-sm font-medium text-white placeholder-gray-500 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    aria-label="Search dashboard products"
+                  />
+                  <svg
+                    className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m21 21-4.35-4.35M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" />
+                  </svg>
+                </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3">
+                  <select
+                    value={filters.category}
+                    onChange={(e) => handleFilterChange('category', e.target.value)}
+                    className="rounded-lg border border-gray-700 bg-[#1b2128] px-3 py-3 text-sm font-medium text-white outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    aria-label="Filter products by category"
+                  >
+                    <option value="">All Categories</option>
+                    {filterOptions.categories.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={filters.type}
+                    onChange={(e) => handleFilterChange('type', e.target.value)}
+                    className="rounded-lg border border-gray-700 bg-[#1b2128] px-3 py-3 text-sm font-medium text-white outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    aria-label="Filter products by type"
+                  >
+                    <option value="">All Types</option>
+                    {filterOptions.types.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={filters.brand}
+                    onChange={(e) => handleFilterChange('brand', e.target.value)}
+                    className="rounded-lg border border-gray-700 bg-[#1b2128] px-3 py-3 text-sm font-medium text-white outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    aria-label="Filter products by brand"
+                  >
+                    <option value="">All Brands</option>
+                    {filterOptions.brands.map((brand) => (
+                      <option key={brand} value={brand}>
+                        {brand}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={filters.stockStatus}
+                    onChange={(e) => handleFilterChange('stockStatus', e.target.value)}
+                    className="rounded-lg border border-gray-700 bg-[#1b2128] px-3 py-3 text-sm font-medium text-white outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    aria-label="Filter products by stock status"
+                  >
+                    <option value="">All Stock</option>
+                    <option value="inStock">In Stock</option>
+                    <option value="lowStock">Low Stock</option>
+                    <option value="outOfStock">Out of Stock</option>
+                  </select>
+
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    disabled={!hasActiveFilters}
+                    className={`rounded-lg border px-4 py-3 text-sm font-bold transition ${
+                      hasActiveFilters
+                        ? 'border-gray-600 bg-gray-800 text-gray-100 hover:bg-gray-700'
+                        : 'border-gray-800 bg-[#1b2128] text-gray-600 cursor-not-allowed'
+                    }`}
+                  >
+                    Clear Filters
+                  </button>
+                </div>
               </div>
               
               {loading ? (
-                <div className="p-10 text-center text-gray-500">Loading products...</div>
+                <div className="p-6 space-y-3">
+                  {[...Array(5)].map((_, index) => (
+                    <div key={index} className="grid grid-cols-5 gap-4 items-center animate-pulse">
+                      <div className="h-14 w-14 rounded-md bg-gray-800"></div>
+                      <div className="col-span-2 space-y-2">
+                        <div className="h-4 w-48 max-w-full rounded bg-gray-800"></div>
+                        <div className="h-3 w-28 rounded bg-gray-800"></div>
+                      </div>
+                      <div className="h-4 w-24 rounded bg-gray-800"></div>
+                      <div className="h-9 w-32 rounded-lg bg-gray-800"></div>
+                    </div>
+                  ))}
+                </div>
+              ) : errorMessage ? (
+                <div className="p-10 text-center">
+                  <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full border border-red-500/30 bg-red-500/10 text-red-400">
+                    <span className="text-xl font-black">!</span>
+                  </div>
+                  <h3 className="text-xl font-black text-white mb-2">Products could not be loaded</h3>
+                  <p className="text-gray-400 text-sm mb-6">{errorMessage}</p>
+                  <button
+                    type="button"
+                    onClick={fetchProducts}
+                    className="rounded-lg bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-700"
+                  >
+                    Retry
+                  </button>
+                </div>
               ) : products.length === 0 ? (
-                <div className="p-10 text-center text-gray-500 text-lg">No products found. Start by adding a new product.</div>
+                <div className="p-10 text-center">
+                  <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-400">
+                    <span className="text-xl font-black">+</span>
+                  </div>
+                  <h3 className="text-xl font-black text-white mb-2">No products yet</h3>
+                  <p className="text-gray-400 text-sm mb-6">Start by adding the first product to your inventory.</p>
+                  <Link
+                    to="/admin/add-product"
+                    className="inline-flex rounded-lg bg-blue-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-blue-700"
+                  >
+                    Add Product
+                  </Link>
+                </div>
+              ) : filteredProducts.length === 0 ? (
+                <div className="p-10 text-center">
+                  <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-400">
+                    <span className="text-xl font-black">0</span>
+                  </div>
+                  <h3 className="text-xl font-black text-white mb-2">No matching products</h3>
+                  <p className="text-gray-400 text-sm mb-6">Adjust your search or clear filters to see more products.</p>
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="rounded-lg bg-gray-800 px-5 py-3 text-sm font-bold text-white transition hover:bg-gray-700"
+                  >
+                    Clear Search and Filters
+                  </button>
+                </div>
               ) : (
-                <div className="overflow-x-auto">
+                <>
+                <div className="divide-y divide-gray-800 md:hidden">
+                  {filteredProducts.map((product) => (
+                    <button
+                      key={product._id}
+                      type="button"
+                      onClick={() => openProductDetails(product)}
+                      className="w-full p-4 text-left transition hover:bg-blue-600/10"
+                    >
+                      <div className="flex gap-4">
+                        {product.images && product.images.length > 0 ? (
+                          <img
+                            src={product.images[0].url}
+                            alt={product.name}
+                            className="h-20 w-20 shrink-0 rounded-md border border-gray-700 object-cover shadow-sm"
+                          />
+                        ) : (
+                          <div className="h-20 w-20 shrink-0 rounded-md bg-gray-800 flex items-center justify-center text-gray-500 text-xs font-semibold">No IMG</div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <div className="font-bold text-gray-100 break-words">{product.name}</div>
+                          <div className="text-xs text-gray-500 mt-1 uppercase tracking-wide">{product.brand || 'No Brand'}</div>
+                          <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                              <span className="block text-xs font-bold uppercase tracking-wider text-gray-500">Category</span>
+                              <span className="text-gray-300 break-words">{product.category || 'Uncategorized'}</span>
+                            </div>
+                            <div>
+                              <span className="block text-xs font-bold uppercase tracking-wider text-gray-500">Price</span>
+                              <span className="font-bold text-blue-400">₹{product.price}</span>
+                            </div>
+                          </div>
+                          <span className={`mt-3 inline-flex px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${product.stock > 0 ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
+                            {product.stock > 0 ? `${product.stock} IN STOCK` : 'OUT OF STOCK'}
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="hidden overflow-x-auto md:block">
                   <table className="w-full text-left border-collapse select-none">
                     <thead>
                       <tr className="bg-[#1b2128] text-gray-400 text-xs uppercase tracking-wider border-b border-gray-700">
@@ -135,13 +428,10 @@ const AdminDashboard = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-800">
-                      {products.map((product) => (
+                      {filteredProducts.map((product) => (
                         <tr 
                           key={product._id} 
-                          onClick={() => {
-                            setSelectedProduct(product);
-                            setActiveImageIndex(0);
-                          }}
+                          onClick={() => openProductDetails(product)}
                           className="hover:bg-blue-600/10 transition duration-150 cursor-pointer"
                         >
                           <td className="px-6 py-4">
@@ -171,6 +461,7 @@ const AdminDashboard = () => {
                     </tbody>
                   </table>
                 </div>
+                </>
               )}
             </div>
           </div>
@@ -271,9 +562,7 @@ const AdminDashboard = () => {
             </div>
           )}
           
-        </main>
-      </div>
-    </div>
+    </AdminLayout>
   );
 };
 

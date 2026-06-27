@@ -156,39 +156,72 @@
 import React, { useState } from 'react';
 import axios from '../utils/axiosInstance';
 import { toast } from 'react-hot-toast';
-import { useNavigate, Link } from 'react-router-dom';
-import { showLoader, hideLoader } from '../utils/loaderState';
+import { useNavigate } from 'react-router-dom';
+import AdminLayout from '../components/AdminLayout';
+
+const initialFormData = {
+  name: '',
+  type: '',
+  category: '',
+  subCategory: '',
+  brand: '',
+  description: '',
+  size: '',
+  model: '',
+  price: '',
+  stock: '',
+};
+
+const productTypes = ['machine', 'accessory', 'part', 'tool', 'spare'];
 
 const AddProduct = () => {
-  const [formData, setFormData] = useState({
-    name: '',
-    type: '',
-    category: '',
-    subCategory: '',
-    brand: '',
-    description: '',
-    size: '',
-    model: '',
-    price: '',
-    stock: '',
-  });
-
+  const [formData, setFormData] = useState(initialFormData);
   const [images, setImages] = useState([]);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [formErrors, setFormErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+
+  const validateForm = () => {
+    const errors = {};
+
+    if (!formData.name.trim()) errors.name = 'Product name is required.';
+    if (!formData.type) errors.type = 'Product type is required.';
+    if (!formData.category.trim()) errors.category = 'Category is required.';
+    if (!formData.price || Number(formData.price) < 0) errors.price = 'Enter a valid price.';
+    if (formData.stock && Number(formData.stock) < 0) errors.stock = 'Stock cannot be negative.';
+    if (images.length === 0) errors.images = 'Add at least one product image.';
+
+    return errors;
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
+    setFormErrors((currentErrors) => ({ ...currentErrors, [name]: '' }));
   };
 
   const handleImageChange = (e) => {
-    setImages([...images, ...Array.from(e.target.files)]);
+    const selectedFiles = Array.from(e.target.files || []);
+    if (selectedFiles.length === 0) return;
+
+    setImages([...images, ...selectedFiles]);
+    setFormErrors((currentErrors) => ({ ...currentErrors, images: '' }));
+    e.target.value = '';
+  };
+
+  const removeImage = (index) => {
+    setImages(images.filter((_, imageIndex) => imageIndex !== index));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      toast.error('Please fix the highlighted fields.');
+      return;
+    }
 
     const productData = new FormData();
     Object.keys(formData).forEach((key) => {
@@ -201,7 +234,6 @@ const AddProduct = () => {
 
     try {
       setIsSubmitting(true);
-      console.log(productData.getAll('images'));
       await axios.post('/api/products', productData);
       toast.success('✅ Product added successfully!');
       navigate('/admin');
@@ -213,86 +245,21 @@ const AddProduct = () => {
     }
   };
 
-  const handleLogout = () => {
-    showLoader();
-    setTimeout(() => {
-      localStorage.removeItem('userInfo');
-      toast.success('Logged out successfully');
-      hideLoader();
-      navigate('/login');
-    }, 600);
-  };
-
   return (
-    <div className="flex h-screen bg-[#1b2128] font-sans text-gray-200 relative overflow-hidden">
-      {/* Mobile Sidebar Overlay */}
-      {isMobileMenuOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-30 md:hidden" 
-          onClick={() => setIsMobileMenuOpen(false)}
-        ></div>
-      )}
-
-      {/* Sidebar - Left */}
-      <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-[#0e1726] shadow-xl flex flex-col transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 transition duration-200 ease-in-out border-r border-gray-800`}>
-        <div className="p-6 border-b border-gray-800 flex flex-col items-center justify-center">
-          <h2 className="text-3xl font-black text-blue-500 tracking-wider">3MT</h2>
-          <span className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Machine Tools</span>
-        </div>
-        <nav className="flex-1 px-4 py-8 space-y-4">
-          <div className="text-xs uppercase text-gray-500 font-bold tracking-widest pl-3 mb-2">Menu</div>
-          <Link to="/admin" className="flex items-center px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg font-medium transition-colors border-l-4 border-transparent hover:border-gray-500">
-             Dashboard
-          </Link>
-          <Link to="/admin/manage" className="flex items-center px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg font-medium transition-colors border-l-4 border-transparent hover:border-gray-500">
-            Manage Products
-          </Link>
-          <Link to="/admin/add-product" className="flex items-center px-4 py-3 bg-blue-600/10 text-blue-500 rounded-lg font-medium transition-colors border-l-4 border-blue-500">
-            Add Product
-          </Link>
-          {/* <Link to="/admin/orders" className="flex items-center px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg font-medium transition-colors border-l-4 border-transparent hover:border-gray-500">
-            View Orders
-          </Link> */}
-        </nav>
-      </aside>
-
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden h-full">
-        {/* Top Navbar */}
-        <header className="h-16 bg-[#0e1726] border-b border-gray-800 flex items-center justify-between px-4 lg:px-10 z-10 shadow-sm shrink-0">
-          <div className="flex items-center md:hidden">
-            <button 
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="text-gray-400 hover:text-white focus:outline-none mr-3"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-            <div className="text-white text-xl font-black tracking-wider">3MT<span className="text-blue-500">TOOLS</span></div>
-          </div>
-          <div className="flex-1"></div> {/* Spacer */}
-          <div className="flex items-center space-x-4">
-            <div className="text-sm text-gray-400 hidden sm:block mr-2 border-r border-gray-700 pr-4">Admin User</div>
-            <button 
-              onClick={handleLogout}
-              className="px-5 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-sm font-bold tracking-wide transition-all shadow-sm"
-            >
-              LOGOUT
-            </button>
-          </div>
-        </header>
-
-        {/* Form Content */}
-        <main className="flex-1 overflow-x-hidden overflow-y-auto bg-[#1b2128] p-6 lg:p-10">
+    <AdminLayout>
           <div className="max-w-3xl mx-auto">
-            <div className="flex justify-between items-center mb-8">
+            <div className="mb-8">
               <h1 className="text-3xl font-bold text-white tracking-tight">Add New Product</h1>
+              <p className="mt-2 text-sm text-gray-400">Create a complete inventory item with details, stock, and product images.</p>
             </div>
 
             <div className="bg-[#0e1726] rounded-xl shadow-lg border border-gray-800 p-8">
               <form onSubmit={handleSubmit} className="space-y-6">
-                
+                <div className="border-b border-gray-800 pb-4">
+                  <h2 className="text-lg font-bold text-white">Product Details</h2>
+                  <p className="text-sm text-gray-500 mt-1">Core information shown in the dashboard and catalog.</p>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Product Name */}
                   <div>
@@ -306,6 +273,7 @@ const AddProduct = () => {
                       className="w-full p-3 bg-[#1b2128] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
                       required
                     />
+                    {formErrors.name && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.name}</p>}
                   </div>
 
                   {/* Type */}
@@ -319,12 +287,11 @@ const AddProduct = () => {
                       required
                     >
                       <option value="" className="text-gray-500">Select Type</option>
-                      <option value="machine">Machine</option>
-                      <option value="accessory">Accessory</option>
-                      <option value="part">Part</option>
-                      <option value="tool">Tool</option>
-                      <option value="spare">Spare</option>
+                      {productTypes.map((type) => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
                     </select>
+                    {formErrors.type && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.type}</p>}
                   </div>
                 
                   {/* Category */}
@@ -339,6 +306,7 @@ const AddProduct = () => {
                       className="w-full p-3 bg-[#1b2128] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
                       required
                     />
+                    {formErrors.category && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.category}</p>}
                   </div>
 
                   {/* Sub Category */}
@@ -379,6 +347,7 @@ const AddProduct = () => {
                       className="w-full p-3 bg-[#1b2128] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
                       required
                     />
+                    {formErrors.price && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.price}</p>}
                   </div>
 
                   {/* Size */}
@@ -418,6 +387,7 @@ const AddProduct = () => {
                       onChange={handleChange}
                       className="w-full p-3 bg-[#1b2128] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
                     />
+                    {formErrors.stock && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.stock}</p>}
                   </div>
                 </div>
 
@@ -435,10 +405,25 @@ const AddProduct = () => {
                 </div>
 
                 {/* Image Upload */}
-                <div>
-                  <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Product Images</label>
+                <div className="bg-[#1b2128] p-5 rounded-lg border border-gray-700">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider">Product Images</label>
+                      <p className="text-xs text-gray-500 mt-1">{images.length} selected. Maximum 5 images are accepted by the server.</p>
+                    </div>
+                    {images.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setImages([])}
+                        className="self-start sm:self-auto text-xs font-bold text-red-400 hover:text-red-300"
+                      >
+                        Clear Selected
+                      </button>
+                    )}
+                  </div>
+                  {formErrors.images && <p className="mb-3 text-xs font-bold text-red-400">{formErrors.images}</p>}
                   
-                  <div className="flex space-x-4 mb-4">
+                  <div className="flex flex-col gap-3 sm:flex-row mb-4">
                     {/* 📸 Camera */}
                     <input
                       type="file"
@@ -487,11 +472,15 @@ const AddProduct = () => {
                           />
                           <button
                             type="button"
-                            onClick={() => setImages(images.filter((_, i) => i !== index))}
-                            className="absolute -top-2 -right-2 bg-red-600 hover:bg-red-700 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold opacity-0 group-hover:opacity-100 transition-opacity"
+                            onClick={() => removeImage(index)}
+                            className="absolute -top-2 -right-2 bg-red-600 hover:bg-red-700 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-lg"
+                            aria-label={`Remove image ${index + 1}`}
                           >
                             ×
                           </button>
+                          <div className="absolute bottom-2 left-2 rounded bg-black/70 px-2 py-1 text-xs font-bold text-white">
+                            {index + 1}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -522,11 +511,8 @@ const AddProduct = () => {
               </form>
             </div>
           </div>
-        </main>
-      </div>
-    </div>
+    </AdminLayout>
   );
 };
 
 export default AddProduct;
-
