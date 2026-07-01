@@ -24,7 +24,7 @@ const ProtectedRoute = ({ requireAdmin = false }) => {
   }
 
   if (requireAdmin && user.role !== 'admin') {
-    return <Navigate to="/home" replace />;
+    return <Navigate to="/user" replace />;
   }
 
   return <Outlet />;

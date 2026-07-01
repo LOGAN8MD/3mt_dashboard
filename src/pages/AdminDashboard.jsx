@@ -16,6 +16,12 @@ const getUniqueOptions = (products, field) => {
 
 const AdminDashboard = () => {
   const [products, setProducts] = useState([]);
+  const [dashboardStats, setDashboardStats] = useState({
+    totalUsers: 0,
+    pendingRequests: 0,
+    approvedRequests: 0,
+    rejectedRequests: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   
@@ -38,17 +44,51 @@ const AdminDashboard = () => {
     setLoading(true);
     setErrorMessage('');
 
-    try {
-      const response = await axios.get('/api/products');
-      setProducts(response.data);
-    } catch (error) {
-      console.error(error);
-      const message = error.response?.data?.message || 'Failed to load products';
+    const [
+      productsResult,
+      usersResult,
+      pendingRequestsResult,
+      approvedRequestsResult,
+      rejectedRequestsResult,
+    ] = await Promise.allSettled([
+      axios.get('/api/products'),
+      axios.get('/api/users'),
+      axios.get('/api/pending-products/admin?status=pending'),
+      axios.get('/api/pending-products/admin?status=approved'),
+      axios.get('/api/pending-products/admin?status=rejected'),
+    ]);
+
+    if (productsResult.status === 'fulfilled') {
+      setProducts(productsResult.value.data);
+    } else {
+      console.error(productsResult.reason);
+      const message = productsResult.reason.response?.data?.message || 'Failed to load products';
       setErrorMessage(message);
       toast.error(message);
-    } finally {
-      setLoading(false);
     }
+
+    const hasMetricError = [
+      usersResult,
+      pendingRequestsResult,
+      approvedRequestsResult,
+      rejectedRequestsResult,
+    ].some((result) => result.status === 'rejected');
+
+    setDashboardStats({
+      totalUsers: usersResult.status === 'fulfilled' ? usersResult.value.data.length : 0,
+      pendingRequests:
+        pendingRequestsResult.status === 'fulfilled' ? pendingRequestsResult.value.data.length : 0,
+      approvedRequests:
+        approvedRequestsResult.status === 'fulfilled' ? approvedRequestsResult.value.data.length : 0,
+      rejectedRequests:
+        rejectedRequestsResult.status === 'fulfilled' ? rejectedRequestsResult.value.data.length : 0,
+    });
+
+    if (hasMetricError) {
+      toast.error('Some dashboard summary metrics could not be loaded');
+    }
+
+    setLoading(false);
   };
 
   const closeModal = () => {
@@ -113,6 +153,26 @@ const AdminDashboard = () => {
       label: 'Categories',
       value: inventoryStats.totalCategories,
       accent: 'border-cyan-500/40 bg-cyan-500/10 text-cyan-400',
+    },
+    {
+      label: 'Users',
+      value: dashboardStats.totalUsers,
+      accent: 'border-violet-500/40 bg-violet-500/10 text-violet-300',
+    },
+    {
+      label: 'Pending Requests',
+      value: dashboardStats.pendingRequests,
+      accent: 'border-orange-500/40 bg-orange-500/10 text-orange-300',
+    },
+    {
+      label: 'Approved Requests',
+      value: dashboardStats.approvedRequests,
+      accent: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-300',
+    },
+    {
+      label: 'Rejected Requests',
+      value: dashboardStats.rejectedRequests,
+      accent: 'border-rose-500/40 bg-rose-500/10 text-rose-300',
     },
   ];
 
@@ -200,7 +260,7 @@ const AdminDashboard = () => {
               <h1 className="text-3xl font-bold text-white tracking-tight">Overview</h1>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 mb-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5 gap-4 mb-8">
               {summaryCards.map((card) => (
                 <div
                   key={card.label}

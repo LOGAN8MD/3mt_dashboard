@@ -3,15 +3,39 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { showLoader, hideLoader } from '../utils/loaderState';
 
-const navItems = [
+const getStoredUser = () => {
+  const userInfo = localStorage.getItem('userInfo');
+  if (!userInfo) return null;
+
+  try {
+    return JSON.parse(userInfo);
+  } catch {
+    localStorage.removeItem('userInfo');
+    return null;
+  }
+};
+
+const adminNavItems = [
   { label: 'Dashboard', to: '/admin' },
   { label: 'Manage Products', to: '/admin/manage' },
   { label: 'Add Product', to: '/admin/add-product' },
+  { label: 'Users', to: '/admin/users' },
+  { label: 'Pending Products', to: '/admin/pending-products' },
+];
+
+const userNavItems = [
+  { label: 'Dashboard', to: '/user' },
+  { label: 'Add Product Request', to: '/user/add-product' },
+  { label: 'My Submissions', to: '/user/submissions' },
 ];
 
 const AdminLayout = ({ children }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const currentUser = getStoredUser();
+  const isAdmin = currentUser?.role === 'admin';
+  const navItems = isAdmin ? adminNavItems : userNavItems;
+  const dashboardHome = isAdmin ? '/admin' : '/user';
 
   const handleLogout = () => {
     showLoader();
@@ -39,8 +63,13 @@ const AdminLayout = ({ children }) => {
 
       <aside className={`fixed inset-y-0 left-0 z-40 w-64 bg-[#0e1726] shadow-xl flex flex-col transform ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} md:relative md:translate-x-0 transition duration-200 ease-in-out border-r border-gray-800`}>
         <div className="p-6 border-b border-gray-800 flex flex-col items-center justify-center">
-          <h2 className="text-3xl font-black text-blue-500 tracking-wider">3MT</h2>
+          <NavLink to={dashboardHome} onClick={closeMobileMenu} className="text-center">
+            <h2 className="text-3xl font-black text-blue-500 tracking-wider">3MT</h2>
+          </NavLink>
           <span className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Machine Tools</span>
+          <span className="mt-3 rounded-full border border-gray-700 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-gray-400">
+            {isAdmin ? 'Admin Dashboard' : 'User Dashboard'}
+          </span>
         </div>
 
         <nav className="flex-1 px-4 py-8 space-y-4">
@@ -82,7 +111,10 @@ const AdminLayout = ({ children }) => {
 
           <div className="flex-1"></div>
           <div className="flex items-center space-x-4">
-            <div className="text-sm text-gray-400 hidden sm:block mr-2 border-r border-gray-700 pr-4">Admin User</div>
+            <div className="hidden sm:block mr-2 border-r border-gray-700 pr-4 text-right">
+              <div className="text-sm font-bold text-gray-300">{currentUser?.name || 'Dashboard User'}</div>
+              <div className="text-xs uppercase tracking-widest text-gray-500">{currentUser?.role || 'user'}</div>
+            </div>
             <button
               onClick={handleLogout}
               className="px-5 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-sm font-bold tracking-wide transition-all shadow-sm"
