@@ -268,13 +268,40 @@ const UserAddProductRequest = () => {
                 )}
               </div>
 
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleImageChange}
-                className="w-full rounded-lg border border-gray-700 bg-[#1b2128] px-4 py-3 text-sm text-gray-300 file:mr-4 file:rounded-lg file:border-0 file:bg-blue-600 file:px-4 file:py-2 file:text-sm file:font-bold file:text-white"
-              />
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <input
+                  type="file"
+                  accept="image/*"
+                  capture="environment"
+                  multiple
+                  onChange={handleImageChange}
+                  id="userRequestCameraInput"
+                  style={{ display: 'none' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => document.getElementById('userRequestCameraInput').click()}
+                  className="flex-1 rounded-lg border border-gray-700 bg-[#1b2128] px-4 py-3 text-sm font-bold text-gray-300 transition hover:border-gray-500"
+                >
+                  <span className="mr-2">📸</span> Take Photo
+                </button>
+
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageChange}
+                  id="userRequestGalleryInput"
+                  style={{ display: 'none' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => document.getElementById('userRequestGalleryInput').click()}
+                  className="flex-1 rounded-lg border border-blue-500/30 bg-blue-600/20 px-4 py-3 text-sm font-bold text-blue-300 transition hover:border-blue-500"
+                >
+                  <span className="mr-2">🖼</span> Upload from Gallery
+                </button>
+              </div>
               {formErrors.images && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.images}</p>}
 
               {images.length > 0 && (

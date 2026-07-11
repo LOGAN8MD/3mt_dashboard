@@ -385,9 +385,14 @@ const ManageProducts = () => {
                   )}
 
                   <div className="flex flex-col gap-3 sm:flex-row mb-4">
-                    <input type="file" accept="image/*" multiple onChange={handleImageChange} id="editFileInput" style={{ display: 'none' }} />
-                    <button type="button" onClick={() => document.getElementById('editFileInput').click()} className="py-2 px-4 bg-blue-600/20 border border-blue-500/30 hover:border-blue-500 text-blue-400 rounded-lg transition-colors font-medium">
-                      Upload New Images
+                    <input type="file" accept="image/*" capture="environment" multiple onChange={handleImageChange} id="editCameraInput" style={{ display: 'none' }} />
+                    <button type="button" onClick={() => document.getElementById('editCameraInput').click()} className="flex-1 rounded-lg border border-gray-700 bg-[#1b2128] px-4 py-3 text-sm font-bold text-gray-300 transition hover:border-gray-500">
+                      <span className="mr-2">📸</span> Take Photo
+                    </button>
+
+                    <input type="file" accept="image/*" multiple onChange={handleImageChange} id="editGalleryInput" style={{ display: 'none' }} />
+                    <button type="button" onClick={() => document.getElementById('editGalleryInput').click()} className="flex-1 rounded-lg border border-blue-500/30 bg-blue-600/20 px-4 py-3 text-sm font-bold text-blue-300 transition hover:border-blue-500">
+                      <span className="mr-2">🖼</span> Upload from Gallery
                     </button>
                   </div>
                   

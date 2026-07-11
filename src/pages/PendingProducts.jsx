@@ -535,7 +535,17 @@ const PendingProducts = () => {
                 {selectedRequest.status === 'pending' && (
                   <div className="rounded-xl border border-gray-800 bg-[#111b2b] p-4">
                     <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-gray-500">Replace Images</label>
-                    <input type="file" accept="image/*" multiple onChange={handleImageChange} className="w-full rounded-lg border border-gray-700 bg-[#1b2128] px-4 py-3 text-sm text-gray-300 file:mr-4 file:rounded-lg file:border-0 file:bg-blue-600 file:px-4 file:py-2 file:text-sm file:font-bold file:text-white" />
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                      <input type="file" accept="image/*" capture="environment" multiple onChange={handleImageChange} id="pendingReviewCameraInput" style={{ display: 'none' }} />
+                      <button type="button" onClick={() => document.getElementById('pendingReviewCameraInput').click()} className="flex-1 rounded-lg border border-gray-700 bg-[#1b2128] px-4 py-3 text-sm font-bold text-gray-300 transition hover:border-gray-500">
+                        <span className="mr-2">📸</span> Take Photo
+                      </button>
+
+                      <input type="file" accept="image/*" multiple onChange={handleImageChange} id="pendingReviewGalleryInput" style={{ display: 'none' }} />
+                      <button type="button" onClick={() => document.getElementById('pendingReviewGalleryInput').click()} className="flex-1 rounded-lg border border-blue-500/30 bg-blue-600/20 px-4 py-3 text-sm font-bold text-blue-300 transition hover:border-blue-500">
+                        <span className="mr-2">🖼</span> Upload from Gallery
+                      </button>
+                    </div>
                     <p className="mt-2 text-xs font-semibold text-gray-500">
                       {replacementImages.length > 0 ? `${replacementImages.length} replacement image(s) selected.` : 'Leave empty to keep submitted images.'}
                     </p>
