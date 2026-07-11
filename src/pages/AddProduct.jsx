@@ -153,7 +153,7 @@
 // export default AddProduct;
 
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from '../utils/axiosInstance';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
@@ -177,9 +177,26 @@ const productTypes = ['machine', 'accessory', 'part', 'tool', 'spare'];
 const AddProduct = () => {
   const [formData, setFormData] = useState(initialFormData);
   const [images, setImages] = useState([]);
+  const [fieldOptions, setFieldOptions] = useState({ categories: [], brands: [] });
   const [formErrors, setFormErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchFieldOptions = async () => {
+      try {
+        const response = await axios.get('/api/products/filter-options');
+        setFieldOptions({
+          categories: response.data?.categories || [],
+          brands: response.data?.brands || [],
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchFieldOptions();
+  }, []);
 
   const validateForm = () => {
     const errors = {};
@@ -300,12 +317,18 @@ const AddProduct = () => {
                     <input
                       type="text"
                       name="category"
+                      list="adminCategoryOptions"
                       placeholder="Category"
                       value={formData.category}
                       onChange={handleChange}
                       className="w-full p-3 bg-[#1b2128] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
                       required
                     />
+                    <datalist id="adminCategoryOptions">
+                      {fieldOptions.categories.map((category) => (
+                        <option key={category} value={category} />
+                      ))}
+                    </datalist>
                     {formErrors.category && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.category}</p>}
                   </div>
 
@@ -328,11 +351,17 @@ const AddProduct = () => {
                     <input
                       type="text"
                       name="brand"
+                      list="adminBrandOptions"
                       placeholder="Brand"
                       value={formData.brand}
                       onChange={handleChange}
                       className="w-full p-3 bg-[#1b2128] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
                     />
+                    <datalist id="adminBrandOptions">
+                      {fieldOptions.brands.map((brand) => (
+                        <option key={brand} value={brand} />
+                      ))}
+                    </datalist>
                   </div>
 
                   {/* Price */}

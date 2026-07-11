@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../components/AdminLayout';
@@ -22,9 +22,26 @@ const productTypes = ['machine', 'accessory', 'part', 'tool', 'spare'];
 const UserAddProductRequest = () => {
   const [formData, setFormData] = useState(initialFormData);
   const [images, setImages] = useState([]);
+  const [fieldOptions, setFieldOptions] = useState({ categories: [], brands: [] });
   const [formErrors, setFormErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchFieldOptions = async () => {
+      try {
+        const response = await axios.get('/api/products/filter-options');
+        setFieldOptions({
+          categories: response.data?.categories || [],
+          brands: response.data?.brands || [],
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchFieldOptions();
+  }, []);
 
   const validateForm = () => {
     const errors = {};
@@ -152,12 +169,18 @@ const UserAddProductRequest = () => {
                 <input
                   type="text"
                   name="category"
+                  list="userRequestCategoryOptions"
                   value={formData.category}
                   onChange={handleChange}
                   className="w-full rounded-lg border border-gray-700 bg-[#1b2128] p-3 text-white placeholder-gray-500 outline-none transition-colors focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   placeholder="Category"
                   required
                 />
+                <datalist id="userRequestCategoryOptions">
+                  {fieldOptions.categories.map((category) => (
+                    <option key={category} value={category} />
+                  ))}
+                </datalist>
                 {formErrors.category && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.category}</p>}
               </div>
 
@@ -178,11 +201,17 @@ const UserAddProductRequest = () => {
                 <input
                   type="text"
                   name="brand"
+                  list="userRequestBrandOptions"
                   value={formData.brand}
                   onChange={handleChange}
                   className="w-full rounded-lg border border-gray-700 bg-[#1b2128] p-3 text-white placeholder-gray-500 outline-none transition-colors focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                   placeholder="Brand"
                 />
+                <datalist id="userRequestBrandOptions">
+                  {fieldOptions.brands.map((brand) => (
+                    <option key={brand} value={brand} />
+                  ))}
+                </datalist>
               </div>
 
               <div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import axios from '../utils/axiosInstance';
 import { toast } from 'react-hot-toast';
 import AdminLayout from '../components/AdminLayout';
@@ -24,6 +24,76 @@ const ManageProducts = () => {
   const [newImages, setNewImages] = useState([]); // File objects for new images
   const [existingImages, setExistingImages] = useState([]); // URLs for display
   const [formErrors, setFormErrors] = useState({});
+  const [filters, setFilters] = useState({
+    search: '',
+    type: 'all',
+    category: 'all',
+    brand: 'all',
+    stock: 'all',
+  });
+
+  const filterOptions = useMemo(() => {
+    const normalizeOptions = (values) =>
+      Array.from(new Set(values.filter(Boolean))).sort((first, second) =>
+        first.localeCompare(second)
+      );
+
+    return {
+      categories: normalizeOptions(products.map((product) => product.category)),
+      brands: normalizeOptions(products.map((product) => product.brand)),
+      types: normalizeOptions(products.map((product) => product.type)),
+    };
+  }, [products]);
+
+  const filteredProducts = useMemo(() => {
+    const searchText = filters.search.trim().toLowerCase();
+
+    return products.filter((product) => {
+      const searchableText = [
+        product.name,
+        product.brand,
+        product.category,
+        product.subCategory,
+        product.type,
+        product.model,
+        product.size,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      const stockValue = Number(product.stock || 0);
+
+      const matchesSearch = !searchText || searchableText.includes(searchText);
+      const matchesType = filters.type === 'all' || product.type === filters.type;
+      const matchesCategory =
+        filters.category === 'all' || product.category === filters.category;
+      const matchesBrand = filters.brand === 'all' || product.brand === filters.brand;
+      const matchesStock =
+        filters.stock === 'all' ||
+        (filters.stock === 'in-stock' && stockValue > 0) ||
+        (filters.stock === 'out-of-stock' && stockValue <= 0);
+
+      return matchesSearch && matchesType && matchesCategory && matchesBrand && matchesStock;
+    });
+  }, [filters, products]);
+
+  const handleFilterChange = (event) => {
+    const { name, value } = event.target;
+    setFilters((currentFilters) => ({
+      ...currentFilters,
+      [name]: value,
+    }));
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      search: '',
+      type: 'all',
+      category: 'all',
+      brand: 'all',
+      stock: 'all',
+    });
+  };
 
   useEffect(() => {
     fetchProducts();
@@ -168,18 +238,107 @@ const ManageProducts = () => {
             </div>
 
             <div className="bg-[#0e1726] rounded-xl shadow-lg border border-gray-800 overflow-hidden">
-              <div className="px-6 py-5 border-b border-gray-800 flex justify-between items-center">
-                <h2 className="text-xl font-bold text-white tracking-wide">Update & Delete Products</h2>
+              <div className="border-b border-gray-800 px-6 py-5">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-xl font-bold text-white tracking-wide">Update & Delete Products</h2>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Showing {filteredProducts.length} of {products.length} products
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="self-start rounded-lg border border-gray-700 px-4 py-2 text-xs font-bold uppercase tracking-widest text-gray-300 transition hover:border-gray-500 hover:text-white sm:self-auto"
+                  >
+                    Clear Filters
+                  </button>
+                </div>
+
+                <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr_1fr_1fr_1fr]">
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-500">Search</label>
+                    <input
+                      type="search"
+                      name="search"
+                      value={filters.search}
+                      onChange={handleFilterChange}
+                      placeholder="Search name, brand, category, model..."
+                      className="w-full rounded-lg border border-gray-700 bg-[#1b2128] px-4 py-3 text-sm text-white placeholder-gray-500 outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-500">Type</label>
+                    <select
+                      name="type"
+                      value={filters.type}
+                      onChange={handleFilterChange}
+                      className="w-full rounded-lg border border-gray-700 bg-[#1b2128] px-4 py-3 text-sm text-white outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value="all">All Types</option>
+                      {filterOptions.types.map((type) => (
+                        <option key={type} value={type}>{type}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-500">Category</label>
+                    <select
+                      name="category"
+                      value={filters.category}
+                      onChange={handleFilterChange}
+                      className="w-full rounded-lg border border-gray-700 bg-[#1b2128] px-4 py-3 text-sm text-white outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value="all">All Categories</option>
+                      {filterOptions.categories.map((category) => (
+                        <option key={category} value={category}>{category}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-500">Brand</label>
+                    <select
+                      name="brand"
+                      value={filters.brand}
+                      onChange={handleFilterChange}
+                      className="w-full rounded-lg border border-gray-700 bg-[#1b2128] px-4 py-3 text-sm text-white outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value="all">All Brands</option>
+                      {filterOptions.brands.map((brand) => (
+                        <option key={brand} value={brand}>{brand}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-500">Stock</label>
+                    <select
+                      name="stock"
+                      value={filters.stock}
+                      onChange={handleFilterChange}
+                      className="w-full rounded-lg border border-gray-700 bg-[#1b2128] px-4 py-3 text-sm text-white outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value="all">All Stock</option>
+                      <option value="in-stock">In Stock</option>
+                      <option value="out-of-stock">Out of Stock</option>
+                    </select>
+                  </div>
+                </div>
               </div>
               
               {loading ? (
                 <div className="p-10 text-center text-gray-500">Loading products...</div>
               ) : products.length === 0 ? (
                 <div className="p-10 text-center text-gray-500 text-lg">No products found. Start by adding a new product.</div>
+              ) : filteredProducts.length === 0 ? (
+                <div className="p-10 text-center text-gray-500 text-lg">No products match the current search or filters.</div>
               ) : (
                 <>
                 <div className="divide-y divide-gray-800 md:hidden">
-                  {products.map((product) => (
+                  {filteredProducts.map((product) => (
                     <div key={product._id} className="p-4">
                       <div className="flex gap-4">
                         {product.images && product.images.length > 0 ? (
@@ -229,7 +388,7 @@ const ManageProducts = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-800">
-                      {products.map((product) => (
+                      {filteredProducts.map((product) => (
                         <tr key={product._id} className="hover:bg-[#1b2128]/50 transition duration-150">
                           <td className="px-6 py-4">
                             {product.images && product.images.length > 0 ? (

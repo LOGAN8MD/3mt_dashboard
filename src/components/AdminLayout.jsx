@@ -40,12 +40,10 @@ const AdminLayout = ({ children }) => {
     ? {
         name: 'text-blue-300',
         role: 'border-blue-500/30 bg-blue-500/10 text-blue-300',
-        dot: 'bg-blue-400',
       }
     : {
         name: 'text-green-300',
         role: 'border-green-500/30 bg-green-500/10 text-green-300',
-        dot: 'bg-green-400',
       };
 
   const handleLogout = () => {
@@ -78,7 +76,10 @@ const AdminLayout = ({ children }) => {
             <h2 className="text-3xl font-black text-blue-500 tracking-wider">3MT</h2>
           </NavLink>
           <span className="text-xs text-gray-400 font-bold uppercase tracking-widest mt-1">Machine Tools</span>
-          <span className="mt-3 rounded-full border border-gray-700 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-gray-400">
+          <span className={`mt-4 max-w-full truncate text-sm font-black ${identityStyles.name}`}>
+            {currentUser?.name || 'Dashboard User'}
+          </span>
+          <span className={`mt-2 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-widest ${identityStyles.role}`}>
             {isAdmin ? 'Admin Dashboard' : 'User Dashboard'}
           </span>
         </div>
@@ -122,17 +123,6 @@ const AdminLayout = ({ children }) => {
 
           <div className="flex-1"></div>
           <div className="flex min-w-0 items-center gap-2 sm:gap-4">
-            <div className="mr-1 flex min-w-0 items-center gap-2 border-r border-gray-700 pr-2 text-right sm:mr-2 sm:pr-4">
-              <span className={`h-2 w-2 shrink-0 rounded-full ${identityStyles.dot}`}></span>
-              <div className="min-w-0">
-                <div className={`max-w-[92px] truncate text-xs font-black sm:max-w-[180px] sm:text-sm ${identityStyles.name}`}>
-                  {currentUser?.name || 'Dashboard User'}
-                </div>
-                <div className={`mt-1 inline-flex rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-widest sm:text-[10px] ${identityStyles.role}`}>
-                  {currentUser?.role || 'user'}
-                </div>
-              </div>
-            </div>
             <button
               onClick={handleLogout}
               className="shrink-0 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs font-bold tracking-wide text-red-400 shadow-sm transition-all hover:bg-red-500/20 sm:px-5 sm:text-sm"

@@ -57,6 +57,7 @@ const PendingProducts = () => {
   const [deletingRequest, setDeletingRequest] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [rejectReason, setRejectReason] = useState('');
+  const [fieldOptions, setFieldOptions] = useState({ categories: [], brands: [] });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [acting, setActing] = useState('');
@@ -84,6 +85,22 @@ const PendingProducts = () => {
   useEffect(() => {
     fetchRequests();
   }, [fetchRequests]);
+
+  useEffect(() => {
+    const fetchFieldOptions = async () => {
+      try {
+        const response = await axios.get('/api/products/filter-options');
+        setFieldOptions({
+          categories: response.data?.categories || [],
+          brands: response.data?.brands || [],
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchFieldOptions();
+  }, []);
 
   const stats = useMemo(
     () => ({
@@ -493,7 +510,12 @@ const PendingProducts = () => {
                   </div>
                   <div>
                     <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-gray-500">Category</label>
-                    <input name="category" value={formData.category} onChange={handleFormChange} disabled={selectedRequest.status !== 'pending'} className="w-full rounded-lg border border-gray-700 bg-[#1b2128] px-4 py-3 text-sm font-medium text-white outline-none focus:border-blue-500 disabled:opacity-60" />
+                    <input name="category" list="pendingCategoryOptions" value={formData.category} onChange={handleFormChange} disabled={selectedRequest.status !== 'pending'} className="w-full rounded-lg border border-gray-700 bg-[#1b2128] px-4 py-3 text-sm font-medium text-white outline-none focus:border-blue-500 disabled:opacity-60" />
+                    <datalist id="pendingCategoryOptions">
+                      {fieldOptions.categories.map((category) => (
+                        <option key={category} value={category} />
+                      ))}
+                    </datalist>
                     {formErrors.category && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.category}</p>}
                   </div>
                   <div>
@@ -502,7 +524,12 @@ const PendingProducts = () => {
                   </div>
                   <div>
                     <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-gray-500">Brand</label>
-                    <input name="brand" value={formData.brand} onChange={handleFormChange} disabled={selectedRequest.status !== 'pending'} className="w-full rounded-lg border border-gray-700 bg-[#1b2128] px-4 py-3 text-sm font-medium text-white outline-none focus:border-blue-500 disabled:opacity-60" />
+                    <input name="brand" list="pendingBrandOptions" value={formData.brand} onChange={handleFormChange} disabled={selectedRequest.status !== 'pending'} className="w-full rounded-lg border border-gray-700 bg-[#1b2128] px-4 py-3 text-sm font-medium text-white outline-none focus:border-blue-500 disabled:opacity-60" />
+                    <datalist id="pendingBrandOptions">
+                      {fieldOptions.brands.map((brand) => (
+                        <option key={brand} value={brand} />
+                      ))}
+                    </datalist>
                   </div>
                   <div>
                     <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-gray-500">Model</label>
