@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { showLoader, hideLoader } from '../utils/loaderState';
+import { getDashboardHomePath, isAdminRole } from '../utils/roles';
 
 const getStoredUser = () => {
   const userInfo = localStorage.getItem('userInfo');
@@ -19,7 +20,10 @@ const adminNavItems = [
   { label: 'Dashboard', to: '/admin' },
   { label: 'Manage Products', to: '/admin/manage' },
   { label: 'Add Product', to: '/admin/add-product' },
-  { label: 'Users', to: '/admin/users' },
+  { label: 'Employees', to: '/admin/employees' },
+  { label: 'Customers', to: '/admin/customers' },
+  { label: 'Enquiries', to: '/admin/enquiries' },
+  { label: 'Demand Report', to: '/admin/demand-report' },
   { label: 'Pending Products', to: '/admin/pending-products' },
 ];
 
@@ -33,9 +37,9 @@ const AdminLayout = ({ children }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
   const currentUser = getStoredUser();
-  const isAdmin = currentUser?.role === 'admin';
+  const isAdmin = isAdminRole(currentUser?.role);
   const navItems = isAdmin ? adminNavItems : userNavItems;
-  const dashboardHome = isAdmin ? '/admin' : '/user';
+  const dashboardHome = getDashboardHomePath(currentUser?.role);
   const identityStyles = isAdmin
     ? {
         name: 'text-blue-300',
@@ -80,7 +84,7 @@ const AdminLayout = ({ children }) => {
             {currentUser?.name || 'Dashboard User'}
           </span>
           <span className={`mt-2 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-widest ${identityStyles.role}`}>
-            {isAdmin ? 'Admin Dashboard' : 'User Dashboard'}
+            {isAdmin ? 'Admin Dashboard' : 'Employee Dashboard'}
           </span>
         </div>
 

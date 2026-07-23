@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import axios from '../utils/axiosInstance';
 import { toast } from 'react-hot-toast';
 import AdminLayout from '../components/AdminLayout';
+import { CUSTOMER_ROLE, EMPLOYEE_ROLE } from '../utils/roles';
 
 const LOW_STOCK_THRESHOLD = 5;
 
@@ -17,7 +18,8 @@ const getUniqueOptions = (products, field) => {
 const AdminDashboard = () => {
   const [products, setProducts] = useState([]);
   const [dashboardStats, setDashboardStats] = useState({
-    totalUsers: 0,
+    totalEmployees: 0,
+    totalCustomers: 0,
     pendingRequests: 0,
     approvedRequests: 0,
     rejectedRequests: 0,
@@ -75,7 +77,14 @@ const AdminDashboard = () => {
     ].some((result) => result.status === 'rejected');
 
     setDashboardStats({
-      totalUsers: usersResult.status === 'fulfilled' ? usersResult.value.data.length : 0,
+      totalEmployees:
+        usersResult.status === 'fulfilled'
+          ? usersResult.value.data.filter((user) => user.role === EMPLOYEE_ROLE).length
+          : 0,
+      totalCustomers:
+        usersResult.status === 'fulfilled'
+          ? usersResult.value.data.filter((user) => user.role === CUSTOMER_ROLE).length
+          : 0,
       pendingRequests:
         pendingRequestsResult.status === 'fulfilled' ? pendingRequestsResult.value.data.length : 0,
       approvedRequests:
@@ -155,9 +164,14 @@ const AdminDashboard = () => {
       accent: 'border-cyan-500/40 bg-cyan-500/10 text-cyan-400',
     },
     {
-      label: 'Users',
-      value: dashboardStats.totalUsers,
+      label: 'Employees',
+      value: dashboardStats.totalEmployees,
       accent: 'border-violet-500/40 bg-violet-500/10 text-violet-300',
+    },
+    {
+      label: 'Customers',
+      value: dashboardStats.totalCustomers,
+      accent: 'border-purple-500/40 bg-purple-500/10 text-purple-300',
     },
     {
       label: 'Pending Requests',

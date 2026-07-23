@@ -1,5 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import axios from '../utils/axiosInstance';
+import { isDashboardRole } from '../utils/roles';
 
 const AuthContext = createContext();
 
@@ -24,6 +25,10 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await axios.post('/api/auth/login', { email, password });
       const userInfo = response.data;
+
+      if (!isDashboardRole(userInfo.role)) {
+        throw new Error('This account can access the customer website only.');
+      }
 
       localStorage.setItem('userInfo', JSON.stringify(userInfo));
       localStorage.setItem('token', userInfo.token);
