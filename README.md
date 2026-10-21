@@ -8,6 +8,16 @@ React dashboard for 3MT administrators and employees. Admins manage products and
 - npm
 - Running 3MT backend API
 
+## API Environment
+
+The dashboard selects its backend automatically through Create React App environment files:
+
+- `npm start` uses `.env.development` and connects to `http://localhost:8080`.
+- `npm run build` uses `.env.production` and connects to `https://threemt-server.onrender.com`.
+- `.env.example` documents the required `REACT_APP_API_BASE_URL` variable.
+
+Set `REACT_APP_API_BASE_URL` in a local environment override or deployment provider when a different backend is required. Use the API origin without a trailing slash. Restart the development server after changing environment variables.
+
 ## Commands
 
 ```bash

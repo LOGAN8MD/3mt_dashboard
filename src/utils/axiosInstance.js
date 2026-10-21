@@ -1,9 +1,19 @@
 import axios from 'axios';
 import { showLoader, hideLoader } from './loaderState';
 
+export const apiBaseURL = process.env.REACT_APP_API_BASE_URL?.trim().replace(/\/+$/, '');
+
+if (!apiBaseURL) {
+  throw new Error('REACT_APP_API_BASE_URL is not configured');
+}
+
+export const resolveApiAssetUrl = (path = '') => {
+  if (/^(https?:|data:|blob:)/i.test(path)) return path;
+  return `${apiBaseURL}/${String(path).replace(/^\/+/, '')}`;
+};
+
 const axiosInstance = axios.create({
-  //  baseURL: 'http://localhost:8080',  // Update with your backend URL
-  baseURL: 'https://threemt-server.onrender.com',
+  baseURL: apiBaseURL,
 });
 
 // Add Authorization header to each request if user is logged in
