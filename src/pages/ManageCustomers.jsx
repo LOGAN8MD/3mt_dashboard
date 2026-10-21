@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import AdminLayout from '../components/AdminLayout';
+import EnquiryOfferDetails from '../components/EnquiryOfferDetails';
 import axios from '../utils/axiosInstance';
 import {
   CUSTOMER_ROLE,
@@ -516,7 +517,7 @@ const ManageCustomers = () => {
                   {[
                     { label: 'Enquiries', value: historyStats.total, color: 'border-blue-500/40 bg-blue-500/10 text-blue-400' },
                     { label: 'Quantity', value: historyStats.quantity, color: 'border-green-500/40 bg-green-500/10 text-green-400' },
-                    { label: 'Estimated Value', value: formatCurrency(historyStats.value), color: 'border-amber-500/40 bg-amber-500/10 text-amber-400' },
+                    { label: 'Estimated Purchase Value', value: formatCurrency(historyStats.value), color: 'border-amber-500/40 bg-amber-500/10 text-amber-400' },
                     { label: 'Latest', value: formatDate(historyStats.latest), color: 'border-purple-500/40 bg-purple-500/10 text-purple-300' },
                   ].map((stat) => (
                     <div key={stat.label} className="rounded-xl border border-gray-800 bg-[#111b2b] p-4">
@@ -566,9 +567,9 @@ const ManageCustomers = () => {
                                 </div>
                                 <div className="text-left sm:text-right">
                                   <p className="text-sm font-bold text-white">
-                                    {formatCurrency(product.priceSnapshot)} x {product.quantity}
+                                    {product.intent === 'rent' ? 'Rental' : 'Purchase'}
                                   </p>
-                                  <p className="mt-1 text-sm text-gray-400">{formatCurrency(product.lineTotal)}</p>
+                                  <EnquiryOfferDetails product={product} />
                                 </div>
                               </div>
                             </div>

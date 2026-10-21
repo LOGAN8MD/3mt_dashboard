@@ -170,9 +170,29 @@ const initialFormData = {
   model: '',
   price: '',
   stock: '',
+  condition: 'new',
+  availabilityType: 'sale',
+  rentalPrice: '',
+  rentPeriod: '',
+  securityDeposit: '',
+  availabilityStatus: 'available',
+  availableFrom: '',
+  availabilityNote: '',
 };
 
 const productTypes = ['machine', 'accessory', 'part', 'tool', 'spare'];
+const rentPeriods = ['day', 'week', 'month'];
+
+const defaultListingFields = {
+  condition: 'new',
+  availabilityType: 'sale',
+  rentalPrice: '',
+  rentPeriod: '',
+  securityDeposit: '',
+  availabilityStatus: 'available',
+  availableFrom: '',
+  availabilityNote: '',
+};
 
 const AddProduct = () => {
   const [formData, setFormData] = useState(initialFormData);
@@ -181,6 +201,9 @@ const AddProduct = () => {
   const [formErrors, setFormErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+  const isUsedMachine = formData.type === 'machine' && formData.condition === 'used';
+  const includesSale = !isUsedMachine || ['sale', 'both'].includes(formData.availabilityType);
+  const includesRent = isUsedMachine && ['rent', 'both'].includes(formData.availabilityType);
 
   useEffect(() => {
     const fetchFieldOptions = async () => {
@@ -204,8 +227,21 @@ const AddProduct = () => {
     if (!formData.name.trim()) errors.name = 'Product name is required.';
     if (!formData.type) errors.type = 'Product type is required.';
     if (!formData.category.trim()) errors.category = 'Category is required.';
-    if (!formData.price || Number(formData.price) < 0) errors.price = 'Enter a valid price.';
-    if (formData.stock && Number(formData.stock) < 0) errors.stock = 'Stock cannot be negative.';
+    if (includesSale && (!formData.price || Number(formData.price) <= 0)) {
+      errors.price = 'Sale price must be greater than zero.';
+    }
+    if (includesRent && (!formData.rentalPrice || Number(formData.rentalPrice) <= 0)) {
+      errors.rentalPrice = 'Rental price must be greater than zero.';
+    }
+    if (includesRent && !formData.rentPeriod) {
+      errors.rentPeriod = 'Select a rent period.';
+    }
+    if (formData.securityDeposit && Number(formData.securityDeposit) < 0) {
+      errors.securityDeposit = 'Security deposit cannot be negative.';
+    }
+    if (!isUsedMachine && formData.stock && Number(formData.stock) < 0) {
+      errors.stock = 'Stock cannot be negative.';
+    }
     if (images.length === 0) errors.images = 'Add at least one product image.';
 
     return errors;
@@ -213,8 +249,60 @@ const AddProduct = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData((currentData) => {
+      if (name === 'type' && value !== 'machine') {
+        return {
+          ...currentData,
+          type: value,
+          ...defaultListingFields,
+          stock: currentData.condition === 'used' ? '' : currentData.stock,
+        };
+      }
+
+      return { ...currentData, [name]: value };
+    });
     setFormErrors((currentErrors) => ({ ...currentErrors, [name]: '' }));
+  };
+
+  const handleConditionChange = (condition) => {
+    setFormData((currentData) => ({
+      ...currentData,
+      ...defaultListingFields,
+      condition,
+      stock: condition === 'used' ? '1' : '',
+    }));
+    setFormErrors({});
+  };
+
+  const handleAvailabilityTypeChange = (e) => {
+    const availabilityType = e.target.value;
+
+    setFormData((currentData) => {
+      let availabilityStatus = currentData.availabilityStatus;
+      if (availabilityType === 'sale' && availabilityStatus === 'on_rent') {
+        availabilityStatus = 'available';
+      }
+      if (availabilityType === 'rent' && availabilityStatus === 'sold') {
+        availabilityStatus = 'available';
+      }
+
+      return {
+        ...currentData,
+        availabilityType,
+        availabilityStatus,
+        rentPeriod:
+          ['rent', 'both'].includes(availabilityType) && !currentData.rentPeriod
+            ? 'month'
+            : currentData.rentPeriod,
+      };
+    });
+    setFormErrors((currentErrors) => ({
+      ...currentErrors,
+      availabilityType: '',
+      price: '',
+      rentalPrice: '',
+      rentPeriod: '',
+    }));
   };
 
   const handleImageChange = (e) => {
@@ -241,8 +329,19 @@ const AddProduct = () => {
     }
 
     const productData = new FormData();
-    Object.keys(formData).forEach((key) => {
-      productData.append(key, formData[key]);
+    const submissionData = isUsedMachine
+      ? {
+          ...formData,
+          price: includesSale ? formData.price : '',
+          rentalPrice: includesRent ? formData.rentalPrice : '',
+          rentPeriod: includesRent ? formData.rentPeriod : '',
+          securityDeposit: includesRent ? formData.securityDeposit : '',
+          stock: '1',
+        }
+      : { ...formData, ...defaultListingFields };
+
+    Object.keys(submissionData).forEach((key) => {
+      productData.append(key, submissionData[key]);
     });
 
     images.forEach((img) => {
@@ -310,6 +409,40 @@ const AddProduct = () => {
                     </select>
                     {formErrors.type && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.type}</p>}
                   </div>
+
+                  {formData.type === 'machine' && (
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Machine Condition</label>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" role="group" aria-label="Machine condition">
+                        <button
+                          type="button"
+                          onClick={() => handleConditionChange('new')}
+                          aria-pressed={formData.condition === 'new'}
+                          className={`border p-4 text-left rounded-lg transition-colors ${
+                            formData.condition === 'new'
+                              ? 'border-blue-500 bg-blue-600/15 text-white'
+                              : 'border-gray-700 bg-[#1b2128] text-gray-300 hover:border-gray-500'
+                          }`}
+                        >
+                          <span className="block font-bold">New Machine</span>
+                          <span className="mt-1 block text-xs text-gray-400">Standard product for sale.</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleConditionChange('used')}
+                          aria-pressed={formData.condition === 'used'}
+                          className={`border p-4 text-left rounded-lg transition-colors ${
+                            formData.condition === 'used'
+                              ? 'border-amber-500 bg-amber-500/10 text-white'
+                              : 'border-gray-700 bg-[#1b2128] text-gray-300 hover:border-gray-500'
+                          }`}
+                        >
+                          <span className="block font-bold">Second-Hand Machine</span>
+                          <span className="mt-1 block text-xs text-gray-400">Available for sale, rent, or both.</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 
                   {/* Category */}
                   <div>
@@ -365,19 +498,25 @@ const AddProduct = () => {
                   </div>
 
                   {/* Price */}
-                  <div>
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Price (₹)</label>
-                    <input
-                      type="number"
-                      name="price"
-                      placeholder="Price"
-                      value={formData.price}
-                      onChange={handleChange}
-                      className="w-full p-3 bg-[#1b2128] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-                      required
-                    />
-                    {formErrors.price && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.price}</p>}
-                  </div>
+                  {includesSale && (
+                    <div>
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                        {isUsedMachine ? 'Sale Price (₹)' : 'Price (₹)'}
+                      </label>
+                      <input
+                        type="number"
+                        name="price"
+                        min="0"
+                        step="0.01"
+                        placeholder={isUsedMachine ? 'Second-hand sale price' : 'Price'}
+                        value={formData.price}
+                        onChange={handleChange}
+                        className="w-full p-3 bg-[#1b2128] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                        required
+                      />
+                      {formErrors.price && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.price}</p>}
+                    </div>
+                  )}
 
                   {/* Size */}
                   <div>
@@ -406,19 +545,136 @@ const AddProduct = () => {
                   </div>
 
                   {/* Stock */}
-                  <div>
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Stock Inventory</label>
-                    <input
-                      type="number"
-                      name="stock"
-                      placeholder="Stock quantity"
-                      value={formData.stock}
-                      onChange={handleChange}
-                      className="w-full p-3 bg-[#1b2128] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-                    />
-                    {formErrors.stock && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.stock}</p>}
-                  </div>
+                  {!isUsedMachine && (
+                    <div>
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Stock Inventory</label>
+                      <input
+                        type="number"
+                        name="stock"
+                        min="0"
+                        placeholder="Stock quantity"
+                        value={formData.stock}
+                        onChange={handleChange}
+                        className="w-full p-3 bg-[#1b2128] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                      />
+                      {formErrors.stock && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.stock}</p>}
+                    </div>
+                  )}
                 </div>
+
+                {isUsedMachine && (
+                  <div className="space-y-5 border-y border-gray-800 py-6">
+                    <div>
+                      <h2 className="text-lg font-bold text-white">Second-Hand Listing</h2>
+                      <p className="mt-1 text-sm text-gray-500">Set how this machine is offered and its current availability.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Available For</label>
+                        <select
+                          name="availabilityType"
+                          value={formData.availabilityType}
+                          onChange={handleAvailabilityTypeChange}
+                          className="w-full p-3 bg-[#1b2128] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors"
+                        >
+                          <option value="sale">Sale</option>
+                          <option value="rent">Rent</option>
+                          <option value="both">Sale and Rent</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Availability Status</label>
+                        <select
+                          name="availabilityStatus"
+                          value={formData.availabilityStatus}
+                          onChange={handleChange}
+                          className="w-full p-3 bg-[#1b2128] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors"
+                        >
+                          <option value="available">Available</option>
+                          {includesRent && <option value="on_rent">On Rent</option>}
+                          <option value="unavailable">Unavailable</option>
+                          {includesSale && <option value="sold">Sold</option>}
+                        </select>
+                      </div>
+
+                      {includesRent && (
+                        <>
+                          <div>
+                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Rental Price (₹)</label>
+                            <input
+                              type="number"
+                              name="rentalPrice"
+                              min="0"
+                              step="0.01"
+                              placeholder="Rental price"
+                              value={formData.rentalPrice}
+                              onChange={handleChange}
+                              className="w-full p-3 bg-[#1b2128] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors"
+                              required
+                            />
+                            {formErrors.rentalPrice && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.rentalPrice}</p>}
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Rent Period</label>
+                            <select
+                              name="rentPeriod"
+                              value={formData.rentPeriod}
+                              onChange={handleChange}
+                              className="w-full p-3 bg-[#1b2128] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors"
+                              required
+                            >
+                              {rentPeriods.map((period) => (
+                                <option key={period} value={period}>Per {period}</option>
+                              ))}
+                            </select>
+                            {formErrors.rentPeriod && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.rentPeriod}</p>}
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Security Deposit (₹)</label>
+                            <input
+                              type="number"
+                              name="securityDeposit"
+                              min="0"
+                              step="0.01"
+                              placeholder="Optional security deposit"
+                              value={formData.securityDeposit}
+                              onChange={handleChange}
+                              className="w-full p-3 bg-[#1b2128] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors"
+                            />
+                            {formErrors.securityDeposit && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.securityDeposit}</p>}
+                          </div>
+                        </>
+                      )}
+
+                      <div>
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Expected Available Date</label>
+                        <input
+                          type="date"
+                          name="availableFrom"
+                          value={formData.availableFrom}
+                          onChange={handleChange}
+                          className="w-full p-3 bg-[#1b2128] border border-gray-700 rounded-lg text-white focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors"
+                        />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Availability Note</label>
+                        <textarea
+                          name="availabilityNote"
+                          placeholder="Optional availability or rental note"
+                          value={formData.availabilityNote}
+                          onChange={handleChange}
+                          rows="3"
+                          className="w-full p-3 bg-[#1b2128] border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-colors"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Description */}
                 <div>

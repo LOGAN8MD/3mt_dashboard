@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import AdminLayout from '../components/AdminLayout';
+import EnquiryOfferDetails from '../components/EnquiryOfferDetails';
 import axios from '../utils/axiosInstance';
 
 const statusOptions = ['', 'new', 'contacted', 'converted', 'closed', 'spam'];
@@ -354,7 +355,7 @@ const ManageEnquiries = () => {
             { label: 'Enquiries', value: stats.total, color: 'border-blue-500/40 bg-blue-500/10 text-blue-400' },
             { label: 'New', value: stats.newCount, color: 'border-cyan-500/40 bg-cyan-500/10 text-cyan-300' },
             { label: 'Converted', value: stats.converted, color: 'border-green-500/40 bg-green-500/10 text-green-400' },
-            { label: 'Estimated Value', value: formatCurrency(stats.estimatedValue), color: 'border-amber-500/40 bg-amber-500/10 text-amber-400' },
+            { label: 'Estimated Purchase Value', value: formatCurrency(stats.estimatedValue), color: 'border-amber-500/40 bg-amber-500/10 text-amber-400' },
           ].map((stat) => (
             <div key={stat.label} className="rounded-xl border border-gray-800 bg-[#0e1726] p-5 shadow-lg">
               <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-lg border ${stat.color}`}>
@@ -660,7 +661,7 @@ const ManageEnquiries = () => {
                       ['Status', formatLabel(selectedEnquiry.status)],
                       ['Created', formatDateTime(selectedEnquiry.createdAt)],
                       ['Updated', formatDateTime(selectedEnquiry.updatedAt)],
-                      ['Estimated Value', formatCurrency(selectedEnquiry.totalEstimatedPrice)],
+                      ['Estimated Purchase Value', formatCurrency(selectedEnquiry.totalEstimatedPrice)],
                       ['Products Count', String((selectedEnquiry.products || []).length)],
                     ].map(([label, value]) => (
                       <div key={label} className="rounded-lg border border-gray-800 bg-[#111b2b] p-4">
@@ -688,9 +689,9 @@ const ManageEnquiries = () => {
                           </div>
                           <div className="text-left sm:text-right">
                             <p className="text-sm font-bold text-white">
-                              {formatCurrency(product.priceSnapshot)} x {product.quantity}
+                              {product.intent === 'rent' ? 'Rental' : 'Purchase'}
                             </p>
-                            <p className="mt-1 text-sm text-gray-400">{formatCurrency(product.lineTotal)}</p>
+                            <EnquiryOfferDetails product={product} />
                           </div>
                         </div>
                       </div>

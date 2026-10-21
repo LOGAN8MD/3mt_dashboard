@@ -118,7 +118,7 @@ const ProductDemandReport = () => {
             { label: 'Products', value: reportSummary.products, color: 'border-blue-500/40 bg-blue-500/10 text-blue-400' },
             { label: 'Enquiries', value: reportSummary.enquiries, color: 'border-cyan-500/40 bg-cyan-500/10 text-cyan-300' },
             { label: 'Quantity', value: reportSummary.quantity, color: 'border-green-500/40 bg-green-500/10 text-green-400' },
-            { label: 'Estimated Value', value: formatCurrency(reportSummary.value), color: 'border-amber-500/40 bg-amber-500/10 text-amber-400' },
+            { label: 'Estimated Purchase Value', value: formatCurrency(reportSummary.value), color: 'border-amber-500/40 bg-amber-500/10 text-amber-400' },
           ].map((stat) => (
             <div key={stat.label} className="rounded-xl border border-gray-800 bg-[#0e1726] p-5 shadow-lg">
               <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-lg border ${stat.color}`}>
@@ -250,7 +250,7 @@ const ProductDemandReport = () => {
                       <th className="px-6 py-4">Enquiries</th>
                       <th className="px-6 py-4">Quantity</th>
                       <th className="px-6 py-4">Customers</th>
-                      <th className="px-6 py-4">Estimated Value</th>
+                      <th className="px-6 py-4">Estimated Purchase Value</th>
                       <th className="px-6 py-4">Latest</th>
                     </tr>
                   </thead>
@@ -268,7 +268,7 @@ const ProductDemandReport = () => {
                             {[row.brand, row.category, row.type].filter(Boolean).join(' | ') || 'No extra product details'}
                           </p>
                         </td>
-                        <td className="px-6 py-4 text-sm font-bold text-white">{row.totalEnquiries || 0}</td>
+                        <td className="px-6 py-4 text-sm font-bold text-white">{row.totalEnquiries || 0}<p className="text-xs text-gray-400">Purchase: {row.purchaseEnquiries ?? row.totalEnquiries ?? 0} · Rental: {row.rentalEnquiries || 0}</p></td>
                         <td className="px-6 py-4 text-sm font-bold text-white">{row.totalQuantityRequested || 0}</td>
                         <td className="px-6 py-4 text-sm font-bold text-white">{row.uniqueCustomerCount || 0}</td>
                         <td className="px-6 py-4 text-sm font-bold text-white">{formatCurrency(row.totalEstimatedValue)}</td>
@@ -296,6 +296,8 @@ const ProductDemandReport = () => {
                     <div className="mt-4 grid grid-cols-2 gap-3">
                       {[
                         ['Enquiries', row.totalEnquiries || 0],
+                        ['Purchase enquiries', row.purchaseEnquiries ?? row.totalEnquiries ?? 0],
+                        ['Rental enquiries', row.rentalEnquiries || 0],
                         ['Quantity', row.totalQuantityRequested || 0],
                         ['Customers', row.uniqueCustomerCount || 0],
                         ['Latest', formatDate(row.latestEnquiryDate)],

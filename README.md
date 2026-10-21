@@ -1,70 +1,36 @@
-# Getting Started with Create React App
+# 3MT Dashboard
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+React dashboard for 3MT administrators and employees. Admins manage products and employee submissions; employees can view the catalog and submit new products for approval.
 
-## Available Scripts
+## Requirements
 
-In the project directory, you can run:
+- Node.js 18 or newer
+- npm
+- Running 3MT backend API
 
-### `npm start`
+## Commands
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+```bash
+npm install
+npm start
+npm test
+npm run test:ci
+npm run build
+npm run verify
+```
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+- `npm start` starts the local dashboard.
+- `npm test` starts the interactive test runner.
+- `npm run test:ci` runs all dashboard tests once.
+- `npm run build` creates the production build.
+- `npm run verify` runs the dashboard tests once and then creates the production build.
 
-### `npm test`
+## Second-Hand Product Flow
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Admins and employees can select **New Machine** or **Second-Hand Machine** while adding a machine. Second-hand machines support sale, rent, or both, with conditional price and rental fields. They also support live availability states: available, on rent, unavailable, and sold.
 
-### `npm run build`
+Employee submissions go to the admin Pending Products page and do not enter the main product collection immediately. An admin can review and edit the submission, replace its images, then approve or reject it. Approval creates the final product through the backend workflow.
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+The admin Manage Products page can update existing listing and availability information. Admin and employee dashboards display condition, offer type, relevant sale/rental pricing, and live availability. Products created before these fields existed display as New, For Sale, and Available.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+The dashboard tests cover second-hand sale/rental display and legacy product display defaults. Backend tests cover validation, employee submission, admin approval, schemas, and persistence payload preparation.

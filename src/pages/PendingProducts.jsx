@@ -5,6 +5,7 @@ import axios from '../utils/axiosInstance';
 
 const productTypes = ['machine', 'accessory', 'part', 'tool', 'spare'];
 const statusOptions = ['all', 'pending', 'approved', 'rejected'];
+const rentPeriods = ['day', 'week', 'month'];
 
 const initialFormData = {
   name: '',
@@ -17,7 +18,26 @@ const initialFormData = {
   model: '',
   price: '',
   stock: '',
+  condition: 'new',
+  availabilityType: 'sale',
+  rentalPrice: '',
+  rentPeriod: '',
+  securityDeposit: '',
+  availabilityStatus: 'available',
+  availableFrom: '',
+  availabilityNote: '',
   adminNote: '',
+};
+
+const defaultListingFields = {
+  condition: 'new',
+  availabilityType: 'sale',
+  rentalPrice: '',
+  rentPeriod: '',
+  securityDeposit: '',
+  availabilityStatus: 'available',
+  availableFrom: '',
+  availabilityNote: '',
 };
 
 const getImageUrl = (product) => product?.images?.[0]?.url || '';
@@ -38,6 +58,30 @@ const toFormData = (formData, images) => {
 
 const getRequestDate = (request) =>
   request?.createdAt ? new Date(request.createdAt).toLocaleDateString() : 'N/A';
+
+const getDateInputValue = (value) => {
+  if (!value) return '';
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 10);
+};
+
+const formatCurrency = (value) =>
+  Number(value || 0).toLocaleString('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 2,
+  });
+
+const getOfferSummary = (request) => {
+  const availabilityType = request.availabilityType || 'sale';
+  const salePrice = formatCurrency(request.price);
+  const rentalPrice = `${formatCurrency(request.rentalPrice)} / ${request.rentPeriod || 'period'}`;
+
+  if (availabilityType === 'rent') return rentalPrice;
+  if (availabilityType === 'both') return `${salePrice} | ${rentalPrice}`;
+  return salePrice;
+};
 
 const getStatusBadgeClass = (status) => {
   const statusStyles = {
@@ -64,6 +108,10 @@ const PendingProducts = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [formErrors, setFormErrors] = useState({});
+  const isEditable = selectedRequest?.status === 'pending';
+  const isUsedMachine = formData.type === 'machine' && formData.condition === 'used';
+  const includesSale = !isUsedMachine || ['sale', 'both'].includes(formData.availabilityType);
+  const includesRent = isUsedMachine && ['rent', 'both'].includes(formData.availabilityType);
 
   const fetchRequests = useCallback(async () => {
     setLoading(true);
@@ -125,6 +173,14 @@ const PendingProducts = () => {
       model: request.model || '',
       price: request.price ?? '',
       stock: request.stock ?? '',
+      condition: request.condition || 'new',
+      availabilityType: request.availabilityType || 'sale',
+      rentalPrice: request.rentalPrice ?? '',
+      rentPeriod: request.rentPeriod || '',
+      securityDeposit: request.securityDeposit ?? '',
+      availabilityStatus: request.availabilityStatus || 'available',
+      availableFrom: getDateInputValue(request.availableFrom),
+      availabilityNote: request.availabilityNote || '',
       adminNote: request.adminNote || '',
     });
     setReplacementImages([]);
@@ -151,18 +207,68 @@ const PendingProducts = () => {
 
   const handleFormChange = (event) => {
     const { name, value } = event.target;
+    setFormData((currentData) => {
+      if (name === 'type' && value !== 'machine') {
+        return {
+          ...currentData,
+          type: value,
+          ...defaultListingFields,
+          stock: currentData.condition === 'used' ? '' : currentData.stock,
+        };
+      }
+
+      return { ...currentData, [name]: value };
+    });
+    setFormErrors((currentErrors) => ({ ...currentErrors, [name]: '' }));
+  };
+
+  const handleConditionChange = (condition) => {
+    if (!isEditable) return;
+
     setFormData((currentData) => ({
       ...currentData,
-      [name]: value,
+      ...defaultListingFields,
+      condition,
+      stock: condition === 'used' ? '1' : '',
     }));
-    setFormErrors((currentErrors) => ({ ...currentErrors, [name]: '' }));
+    setFormErrors({});
+  };
+
+  const handleAvailabilityTypeChange = (event) => {
+    const availabilityType = event.target.value;
+
+    setFormData((currentData) => {
+      let availabilityStatus = currentData.availabilityStatus;
+      if (availabilityType === 'sale' && availabilityStatus === 'on_rent') {
+        availabilityStatus = 'available';
+      }
+      if (availabilityType === 'rent' && availabilityStatus === 'sold') {
+        availabilityStatus = 'available';
+      }
+
+      return {
+        ...currentData,
+        availabilityType,
+        availabilityStatus,
+        rentPeriod:
+          ['rent', 'both'].includes(availabilityType) && !currentData.rentPeriod
+            ? 'month'
+            : currentData.rentPeriod,
+      };
+    });
+    setFormErrors((currentErrors) => ({
+      ...currentErrors,
+      price: '',
+      rentalPrice: '',
+      rentPeriod: '',
+    }));
   };
 
   const handleImageChange = (event) => {
     const files = Array.from(event.target.files || []);
     if (files.length === 0) return;
 
-    setReplacementImages(files);
+    setReplacementImages(files.slice(0, 5));
     event.target.value = '';
   };
 
@@ -172,11 +278,42 @@ const PendingProducts = () => {
     if (!formData.name.trim()) errors.name = 'Product name is required.';
     if (!formData.type) errors.type = 'Product type is required.';
     if (!formData.category.trim()) errors.category = 'Category is required.';
-    if (!formData.price || Number(formData.price) < 0) errors.price = 'Enter a valid price.';
-    if (formData.stock && Number(formData.stock) < 0) errors.stock = 'Stock cannot be negative.';
+    if (includesSale && (!formData.price || Number(formData.price) <= 0)) {
+      errors.price = 'Sale price must be greater than zero.';
+    }
+    if (includesRent && (!formData.rentalPrice || Number(formData.rentalPrice) <= 0)) {
+      errors.rentalPrice = 'Rental price must be greater than zero.';
+    }
+    if (includesRent && !formData.rentPeriod) {
+      errors.rentPeriod = 'Select a rent period.';
+    }
+    if (formData.securityDeposit && Number(formData.securityDeposit) < 0) {
+      errors.securityDeposit = 'Security deposit cannot be negative.';
+    }
+    if (!isUsedMachine && formData.stock && Number(formData.stock) < 0) {
+      errors.stock = 'Stock cannot be negative.';
+    }
 
     return errors;
   };
+
+  const getSubmissionData = () =>
+    isUsedMachine
+      ? {
+          ...formData,
+          price: includesSale ? formData.price : '',
+          rentalPrice: includesRent ? formData.rentalPrice : '',
+          rentPeriod: includesRent ? formData.rentPeriod : '',
+          securityDeposit: includesRent ? formData.securityDeposit : '',
+          stock: '1',
+        }
+      : { ...formData, ...defaultListingFields };
+
+  const savePendingProduct = async () =>
+    axios.put(
+      `/api/pending-products/admin/${selectedRequest._id}`,
+      toFormData(getSubmissionData(), replacementImages)
+    );
 
   const updateRequestInList = (updatedRequest) => {
     setRequests((currentRequests) =>
@@ -201,10 +338,7 @@ const PendingProducts = () => {
     setSaving(true);
 
     try {
-      const response = await axios.put(
-        `/api/pending-products/admin/${selectedRequest._id}`,
-        toFormData(formData, replacementImages)
-      );
+      const response = await savePendingProduct();
       updateRequestInList(response.data);
       setReplacementImages([]);
       toast.success('Pending product updated');
@@ -218,9 +352,20 @@ const PendingProducts = () => {
   const handleApprove = async () => {
     if (!selectedRequest || selectedRequest.status !== 'pending') return;
 
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      toast.error('Please fix the highlighted fields before approval.');
+      return;
+    }
+
     setActing('approve');
 
     try {
+      const savedResponse = await savePendingProduct();
+      updateRequestInList(savedResponse.data);
+      setReplacementImages([]);
+
       const response = await axios.patch(
         `/api/pending-products/admin/${selectedRequest._id}/approve`,
         { adminNote: formData.adminNote }
@@ -372,7 +517,7 @@ const PendingProducts = () => {
                     <tr>
                       <th className="px-6 py-4">Product</th>
                       <th className="px-6 py-4">Submitted By</th>
-                      <th className="px-6 py-4">Price</th>
+                      <th className="px-6 py-4">Offer</th>
                       <th className="px-6 py-4">Status</th>
                       <th className="px-6 py-4">Date</th>
                       <th className="px-6 py-4 text-right">Action</th>
@@ -390,12 +535,14 @@ const PendingProducts = () => {
                             )}
                             <div>
                               <p className="font-bold text-white">{request.name}</p>
-                              <p className="mt-1 text-xs uppercase tracking-wide text-gray-500">{request.brand || 'No Brand'}</p>
+                              <p className="mt-1 text-xs uppercase tracking-wide text-gray-500">
+                                {request.brand || 'No Brand'} · {request.condition === 'used' ? 'Second-Hand' : 'New'}
+                              </p>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-300">{request.submittedBy?.name || 'Unknown'}</td>
-                        <td className="px-6 py-4 text-sm font-bold text-gray-200">₹{request.price}</td>
+                        <td className="max-w-[240px] px-6 py-4 text-sm font-bold text-gray-200">{getOfferSummary(request)}</td>
                         <td className="px-6 py-4">
                           <span className={`rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-widest ${getStatusBadgeClass(request.status)}`}>
                             {request.status}
@@ -409,7 +556,7 @@ const PendingProducts = () => {
                               onClick={() => openRequest(request)}
                               className="rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-2 text-sm font-bold text-blue-300 transition hover:bg-blue-500/20 hover:text-white"
                             >
-                              Review
+                              {request.status === 'pending' ? 'Review' : 'View'}
                             </button>
                             <button
                               type="button"
@@ -438,7 +585,10 @@ const PendingProducts = () => {
                       <div className="min-w-0 flex-1">
                         <p className="break-words font-bold text-white">{request.name}</p>
                         <p className="mt-1 text-sm text-gray-400">{request.submittedBy?.name || 'Unknown'}</p>
-                        <p className="mt-2 text-sm font-bold text-gray-200">₹{request.price}</p>
+                        <p className="mt-1 text-xs font-bold uppercase text-gray-500">
+                          {request.condition === 'used' ? 'Second-Hand' : 'New'} · {request.availabilityType || 'sale'}
+                        </p>
+                        <p className="mt-2 text-sm font-bold text-gray-200">{getOfferSummary(request)}</p>
                         <span className={`mt-3 inline-flex rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-widest ${getStatusBadgeClass(request.status)}`}>
                           {request.status}
                         </span>
@@ -450,7 +600,7 @@ const PendingProducts = () => {
                         onClick={() => openRequest(request)}
                         className="rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm font-bold text-blue-300 transition hover:bg-blue-500/20 hover:text-white"
                       >
-                        Review
+                        {request.status === 'pending' ? 'Review' : 'View'}
                       </button>
                       <button
                         type="button"
@@ -473,12 +623,17 @@ const PendingProducts = () => {
           <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-gray-700 bg-[#0e1726] shadow-2xl">
             <div className="flex items-center justify-between border-b border-gray-800 bg-[#1b2128] px-6 py-4">
               <div>
-                <h2 className="text-xl font-bold text-white">Review Product Request</h2>
+                <div className="flex flex-wrap items-center gap-3">
+                  <h2 className="text-xl font-bold text-white">Review Product Request</h2>
+                  <span className={`rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-widest ${getStatusBadgeClass(selectedRequest.status)}`}>
+                    {selectedRequest.status}
+                  </span>
+                </div>
                 <p className="mt-1 text-sm text-gray-400">
                   Submitted by {selectedRequest.submittedBy?.name || 'Unknown'} on {getRequestDate(selectedRequest)}
                 </p>
               </div>
-              <button type="button" onClick={closeRequest} className="text-3xl font-bold text-gray-400 transition hover:text-white">&times;</button>
+              <button type="button" onClick={closeRequest} aria-label="Close product review" className="text-3xl font-bold text-gray-400 transition hover:text-white">&times;</button>
             </div>
 
             <div className="overflow-y-auto p-6">
@@ -508,6 +663,41 @@ const PendingProducts = () => {
                     </select>
                     {formErrors.type && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.type}</p>}
                   </div>
+                  {formData.type === 'machine' && (
+                    <div className="md:col-span-2">
+                      <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-gray-500">Machine Condition</label>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" role="group" aria-label="Machine condition">
+                        <button
+                          type="button"
+                          onClick={() => handleConditionChange('new')}
+                          disabled={!isEditable}
+                          aria-pressed={formData.condition === 'new'}
+                          className={`rounded-lg border p-4 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                            formData.condition === 'new'
+                              ? 'border-blue-500 bg-blue-600/15 text-white'
+                              : 'border-gray-700 bg-[#1b2128] text-gray-300 hover:border-gray-500'
+                          }`}
+                        >
+                          <span className="block font-bold">New Machine</span>
+                          <span className="mt-1 block text-xs text-gray-400">Standard sale listing.</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleConditionChange('used')}
+                          disabled={!isEditable}
+                          aria-pressed={formData.condition === 'used'}
+                          className={`rounded-lg border p-4 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                            formData.condition === 'used'
+                              ? 'border-amber-500 bg-amber-500/10 text-white'
+                              : 'border-gray-700 bg-[#1b2128] text-gray-300 hover:border-gray-500'
+                          }`}
+                        >
+                          <span className="block font-bold">Second-Hand Machine</span>
+                          <span className="mt-1 block text-xs text-gray-400">Sale, rental, or combined listing.</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   <div>
                     <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-gray-500">Category</label>
                     <input name="category" list="pendingCategoryOptions" value={formData.category} onChange={handleFormChange} disabled={selectedRequest.status !== 'pending'} className="w-full rounded-lg border border-gray-700 bg-[#1b2128] px-4 py-3 text-sm font-medium text-white outline-none focus:border-blue-500 disabled:opacity-60" />
@@ -539,16 +729,22 @@ const PendingProducts = () => {
                     <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-gray-500">Size</label>
                     <input name="size" value={formData.size} onChange={handleFormChange} disabled={selectedRequest.status !== 'pending'} className="w-full rounded-lg border border-gray-700 bg-[#1b2128] px-4 py-3 text-sm font-medium text-white outline-none focus:border-blue-500 disabled:opacity-60" />
                   </div>
-                  <div>
-                    <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-gray-500">Price</label>
-                    <input type="number" name="price" value={formData.price} onChange={handleFormChange} disabled={selectedRequest.status !== 'pending'} className="w-full rounded-lg border border-gray-700 bg-[#1b2128] px-4 py-3 text-sm font-medium text-white outline-none focus:border-blue-500 disabled:opacity-60" />
-                    {formErrors.price && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.price}</p>}
-                  </div>
-                  <div>
-                    <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-gray-500">Stock</label>
-                    <input type="number" name="stock" value={formData.stock} onChange={handleFormChange} disabled={selectedRequest.status !== 'pending'} className="w-full rounded-lg border border-gray-700 bg-[#1b2128] px-4 py-3 text-sm font-medium text-white outline-none focus:border-blue-500 disabled:opacity-60" />
-                    {formErrors.stock && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.stock}</p>}
-                  </div>
+                  {includesSale && (
+                    <div>
+                      <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-gray-500">
+                        {isUsedMachine ? 'Sale Price (₹)' : 'Price (₹)'}
+                      </label>
+                      <input type="number" name="price" min="0" step="0.01" value={formData.price} onChange={handleFormChange} disabled={!isEditable} className="w-full rounded-lg border border-gray-700 bg-[#1b2128] px-4 py-3 text-sm font-medium text-white outline-none focus:border-blue-500 disabled:opacity-60" />
+                      {formErrors.price && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.price}</p>}
+                    </div>
+                  )}
+                  {!isUsedMachine && (
+                    <div>
+                      <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-gray-500">Stock</label>
+                      <input type="number" name="stock" min="0" value={formData.stock} onChange={handleFormChange} disabled={!isEditable} className="w-full rounded-lg border border-gray-700 bg-[#1b2128] px-4 py-3 text-sm font-medium text-white outline-none focus:border-blue-500 disabled:opacity-60" />
+                      {formErrors.stock && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.stock}</p>}
+                    </div>
+                  )}
                   <div className="md:col-span-2">
                     <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-gray-500">Description</label>
                     <textarea name="description" value={formData.description} onChange={handleFormChange} disabled={selectedRequest.status !== 'pending'} rows="4" className="w-full rounded-lg border border-gray-700 bg-[#1b2128] px-4 py-3 text-sm font-medium text-white outline-none focus:border-blue-500 disabled:opacity-60" />
@@ -558,6 +754,70 @@ const PendingProducts = () => {
                     <textarea name="adminNote" value={formData.adminNote} onChange={handleFormChange} disabled={selectedRequest.status !== 'pending'} rows="3" className="w-full rounded-lg border border-gray-700 bg-[#1b2128] px-4 py-3 text-sm font-medium text-white outline-none focus:border-blue-500 disabled:opacity-60" />
                   </div>
                 </div>
+
+                {isUsedMachine && (
+                  <div className="space-y-5 border-y border-gray-800 py-6">
+                    <div>
+                      <h3 className="text-lg font-bold text-white">Second-Hand Listing</h3>
+                      <p className="mt-1 text-sm text-gray-500">Confirm the offer terms and current machine availability before approval.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                      <div>
+                        <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-gray-500">Available For</label>
+                        <select name="availabilityType" value={formData.availabilityType} onChange={handleAvailabilityTypeChange} disabled={!isEditable} className="w-full rounded-lg border border-gray-700 bg-[#1b2128] px-4 py-3 text-sm font-medium text-white outline-none focus:border-amber-500 disabled:opacity-60">
+                          <option value="sale">Sale</option>
+                          <option value="rent">Rent</option>
+                          <option value="both">Sale and Rent</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-gray-500">Availability Status</label>
+                        <select name="availabilityStatus" value={formData.availabilityStatus} onChange={handleFormChange} disabled={!isEditable} className="w-full rounded-lg border border-gray-700 bg-[#1b2128] px-4 py-3 text-sm font-medium text-white outline-none focus:border-amber-500 disabled:opacity-60">
+                          <option value="available">Available</option>
+                          {includesRent && <option value="on_rent">On Rent</option>}
+                          <option value="unavailable">Unavailable</option>
+                          {includesSale && <option value="sold">Sold</option>}
+                        </select>
+                      </div>
+
+                      {includesRent && (
+                        <>
+                          <div>
+                            <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-gray-500">Rental Price (₹)</label>
+                            <input type="number" name="rentalPrice" min="0" step="0.01" value={formData.rentalPrice} onChange={handleFormChange} disabled={!isEditable} className="w-full rounded-lg border border-gray-700 bg-[#1b2128] px-4 py-3 text-sm font-medium text-white outline-none focus:border-amber-500 disabled:opacity-60" />
+                            {formErrors.rentalPrice && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.rentalPrice}</p>}
+                          </div>
+                          <div>
+                            <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-gray-500">Rent Period</label>
+                            <select name="rentPeriod" value={formData.rentPeriod} onChange={handleFormChange} disabled={!isEditable} className="w-full rounded-lg border border-gray-700 bg-[#1b2128] px-4 py-3 text-sm font-medium text-white outline-none focus:border-amber-500 disabled:opacity-60">
+                              {rentPeriods.map((period) => (
+                                <option key={period} value={period}>Per {period}</option>
+                              ))}
+                            </select>
+                            {formErrors.rentPeriod && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.rentPeriod}</p>}
+                          </div>
+                          <div>
+                            <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-gray-500">Security Deposit (₹)</label>
+                            <input type="number" name="securityDeposit" min="0" step="0.01" value={formData.securityDeposit} onChange={handleFormChange} disabled={!isEditable} className="w-full rounded-lg border border-gray-700 bg-[#1b2128] px-4 py-3 text-sm font-medium text-white outline-none focus:border-amber-500 disabled:opacity-60" />
+                            {formErrors.securityDeposit && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.securityDeposit}</p>}
+                          </div>
+                        </>
+                      )}
+
+                      <div>
+                        <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-gray-500">Expected Available Date</label>
+                        <input type="date" name="availableFrom" value={formData.availableFrom} onChange={handleFormChange} disabled={!isEditable} className="w-full rounded-lg border border-gray-700 bg-[#1b2128] px-4 py-3 text-sm font-medium text-white outline-none focus:border-amber-500 disabled:opacity-60" />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="mb-2 block text-xs font-bold uppercase tracking-widest text-gray-500">Availability Note</label>
+                        <textarea name="availabilityNote" value={formData.availabilityNote} onChange={handleFormChange} disabled={!isEditable} rows="3" className="w-full rounded-lg border border-gray-700 bg-[#1b2128] px-4 py-3 text-sm font-medium text-white outline-none focus:border-amber-500 disabled:opacity-60" />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {selectedRequest.status === 'pending' && (
                   <div className="rounded-xl border border-gray-800 bg-[#111b2b] p-4">
@@ -585,7 +845,7 @@ const PendingProducts = () => {
                       {saving ? 'Saving...' : 'Save Edits'}
                     </button>
                     <button type="button" onClick={handleApprove} disabled={saving || Boolean(acting)} className="rounded-lg border border-green-500/30 bg-green-500/10 px-5 py-3 text-sm font-black uppercase tracking-widest text-green-300 transition hover:bg-green-500/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-60">
-                      {acting === 'approve' ? 'Approving...' : 'Approve'}
+                      {acting === 'approve' ? 'Saving & Approving...' : 'Approve'}
                     </button>
                     <div className="space-y-3">
                       <input value={rejectReason} onChange={(event) => setRejectReason(event.target.value)} placeholder="Reject reason" className="w-full rounded-lg border border-gray-700 bg-[#1b2128] px-4 py-3 text-sm font-medium text-white outline-none focus:border-red-500" />

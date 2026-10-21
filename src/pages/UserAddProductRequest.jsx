@@ -15,9 +15,29 @@ const initialFormData = {
   model: '',
   price: '',
   stock: '',
+  condition: 'new',
+  availabilityType: 'sale',
+  rentalPrice: '',
+  rentPeriod: '',
+  securityDeposit: '',
+  availabilityStatus: 'available',
+  availableFrom: '',
+  availabilityNote: '',
 };
 
 const productTypes = ['machine', 'accessory', 'part', 'tool', 'spare'];
+const rentPeriods = ['day', 'week', 'month'];
+
+const defaultListingFields = {
+  condition: 'new',
+  availabilityType: 'sale',
+  rentalPrice: '',
+  rentPeriod: '',
+  securityDeposit: '',
+  availabilityStatus: 'available',
+  availableFrom: '',
+  availabilityNote: '',
+};
 
 const UserAddProductRequest = () => {
   const [formData, setFormData] = useState(initialFormData);
@@ -26,6 +46,9 @@ const UserAddProductRequest = () => {
   const [formErrors, setFormErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
+  const isUsedMachine = formData.type === 'machine' && formData.condition === 'used';
+  const includesSale = !isUsedMachine || ['sale', 'both'].includes(formData.availabilityType);
+  const includesRent = isUsedMachine && ['rent', 'both'].includes(formData.availabilityType);
 
   useEffect(() => {
     const fetchFieldOptions = async () => {
@@ -49,8 +72,21 @@ const UserAddProductRequest = () => {
     if (!formData.name.trim()) errors.name = 'Product name is required.';
     if (!formData.type) errors.type = 'Product type is required.';
     if (!formData.category.trim()) errors.category = 'Category is required.';
-    if (!formData.price || Number(formData.price) < 0) errors.price = 'Enter a valid price.';
-    if (formData.stock && Number(formData.stock) < 0) errors.stock = 'Stock cannot be negative.';
+    if (includesSale && (!formData.price || Number(formData.price) <= 0)) {
+      errors.price = 'Sale price must be greater than zero.';
+    }
+    if (includesRent && (!formData.rentalPrice || Number(formData.rentalPrice) <= 0)) {
+      errors.rentalPrice = 'Rental price must be greater than zero.';
+    }
+    if (includesRent && !formData.rentPeriod) {
+      errors.rentPeriod = 'Select a rent period.';
+    }
+    if (formData.securityDeposit && Number(formData.securityDeposit) < 0) {
+      errors.securityDeposit = 'Security deposit cannot be negative.';
+    }
+    if (!isUsedMachine && formData.stock && Number(formData.stock) < 0) {
+      errors.stock = 'Stock cannot be negative.';
+    }
     if (images.length === 0) errors.images = 'Add at least one product image.';
 
     return errors;
@@ -58,11 +94,48 @@ const UserAddProductRequest = () => {
 
   const handleChange = (event) => {
     const { name, value } = event.target;
+    setFormData((currentData) => {
+      if (name === 'type' && value !== 'machine') {
+        return {
+          ...currentData,
+          type: value,
+          ...defaultListingFields,
+          stock: currentData.condition === 'used' ? '' : currentData.stock,
+        };
+      }
+
+      return { ...currentData, [name]: value };
+    });
+    setFormErrors((currentErrors) => ({ ...currentErrors, [name]: '' }));
+  };
+
+  const handleConditionChange = (condition) => {
     setFormData((currentData) => ({
       ...currentData,
-      [name]: value,
+      ...defaultListingFields,
+      condition,
+      stock: condition === 'used' ? '1' : '',
     }));
-    setFormErrors((currentErrors) => ({ ...currentErrors, [name]: '' }));
+    setFormErrors({});
+  };
+
+  const handleAvailabilityTypeChange = (event) => {
+    const availabilityType = event.target.value;
+
+    setFormData((currentData) => ({
+      ...currentData,
+      availabilityType,
+      rentPeriod:
+        ['rent', 'both'].includes(availabilityType) && !currentData.rentPeriod
+          ? 'month'
+          : currentData.rentPeriod,
+    }));
+    setFormErrors((currentErrors) => ({
+      ...currentErrors,
+      price: '',
+      rentalPrice: '',
+      rentPeriod: '',
+    }));
   };
 
   const handleImageChange = (event) => {
@@ -93,7 +166,19 @@ const UserAddProductRequest = () => {
     }
 
     const requestData = new FormData();
-    Object.entries(formData).forEach(([key, value]) => {
+    const submissionData = isUsedMachine
+      ? {
+          ...formData,
+          price: includesSale ? formData.price : '',
+          rentalPrice: includesRent ? formData.rentalPrice : '',
+          rentPeriod: includesRent ? formData.rentPeriod : '',
+          securityDeposit: includesRent ? formData.securityDeposit : '',
+          availabilityStatus: 'available',
+          stock: '1',
+        }
+      : { ...formData, ...defaultListingFields };
+
+    Object.entries(submissionData).forEach(([key, value]) => {
       requestData.append(key, value);
     });
 
@@ -164,6 +249,40 @@ const UserAddProductRequest = () => {
                 {formErrors.type && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.type}</p>}
               </div>
 
+              {formData.type === 'machine' && (
+                <div className="md:col-span-2">
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-400">Machine Condition</label>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" role="group" aria-label="Machine condition">
+                    <button
+                      type="button"
+                      onClick={() => handleConditionChange('new')}
+                      aria-pressed={formData.condition === 'new'}
+                      className={`rounded-lg border p-4 text-left transition-colors ${
+                        formData.condition === 'new'
+                          ? 'border-blue-500 bg-blue-600/15 text-white'
+                          : 'border-gray-700 bg-[#1b2128] text-gray-300 hover:border-gray-500'
+                      }`}
+                    >
+                      <span className="block font-bold">New Machine</span>
+                      <span className="mt-1 block text-xs text-gray-400">Submit a standard machine for sale.</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleConditionChange('used')}
+                      aria-pressed={formData.condition === 'used'}
+                      className={`rounded-lg border p-4 text-left transition-colors ${
+                        formData.condition === 'used'
+                          ? 'border-amber-500 bg-amber-500/10 text-white'
+                          : 'border-gray-700 bg-[#1b2128] text-gray-300 hover:border-gray-500'
+                      }`}
+                    >
+                      <span className="block font-bold">Second-Hand Machine</span>
+                      <span className="mt-1 block text-xs text-gray-400">Submit it for sale, rent, or both.</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-400">Category</label>
                 <input
@@ -214,20 +333,25 @@ const UserAddProductRequest = () => {
                 </datalist>
               </div>
 
-              <div>
-                <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-400">Price</label>
-                <input
-                  type="number"
-                  name="price"
-                  value={formData.price}
-                  onChange={handleChange}
-                  className="w-full rounded-lg border border-gray-700 bg-[#1b2128] p-3 text-white placeholder-gray-500 outline-none transition-colors focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  placeholder="Price"
-                  min="0"
-                  required
-                />
-                {formErrors.price && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.price}</p>}
-              </div>
+              {includesSale && (
+                <div>
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-400">
+                    {isUsedMachine ? 'Sale Price (₹)' : 'Price (₹)'}
+                  </label>
+                  <input
+                    type="number"
+                    name="price"
+                    value={formData.price}
+                    onChange={handleChange}
+                    className="w-full rounded-lg border border-gray-700 bg-[#1b2128] p-3 text-white placeholder-gray-500 outline-none transition-colors focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    placeholder={isUsedMachine ? 'Second-hand sale price' : 'Price'}
+                    min="0"
+                    step="0.01"
+                    required
+                  />
+                  {formErrors.price && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.price}</p>}
+                </div>
+              )}
 
               <div>
                 <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-400">Size</label>
@@ -253,19 +377,21 @@ const UserAddProductRequest = () => {
                 />
               </div>
 
-              <div>
-                <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-400">Stock</label>
-                <input
-                  type="number"
-                  name="stock"
-                  value={formData.stock}
-                  onChange={handleChange}
-                  className="w-full rounded-lg border border-gray-700 bg-[#1b2128] p-3 text-white placeholder-gray-500 outline-none transition-colors focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                  placeholder="Stock"
-                  min="0"
-                />
-                {formErrors.stock && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.stock}</p>}
-              </div>
+              {!isUsedMachine && (
+                <div>
+                  <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-400">Stock</label>
+                  <input
+                    type="number"
+                    name="stock"
+                    value={formData.stock}
+                    onChange={handleChange}
+                    className="w-full rounded-lg border border-gray-700 bg-[#1b2128] p-3 text-white placeholder-gray-500 outline-none transition-colors focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    placeholder="Stock"
+                    min="0"
+                  />
+                  {formErrors.stock && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.stock}</p>}
+                </div>
+              )}
 
               <div className="md:col-span-2">
                 <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-400">Description</label>
@@ -279,6 +405,113 @@ const UserAddProductRequest = () => {
                 />
               </div>
             </div>
+
+            {isUsedMachine && (
+              <div className="space-y-5 border-y border-gray-800 py-6">
+                <div>
+                  <h2 className="text-lg font-bold text-white">Second-Hand Listing</h2>
+                  <p className="mt-1 text-sm text-gray-500">Provide the sale or rental terms for admin review.</p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-400">Available For</label>
+                    <select
+                      name="availabilityType"
+                      value={formData.availabilityType}
+                      onChange={handleAvailabilityTypeChange}
+                      className="w-full rounded-lg border border-gray-700 bg-[#1b2128] p-3 text-white outline-none transition-colors focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                    >
+                      <option value="sale">Sale</option>
+                      <option value="rent">Rent</option>
+                      <option value="both">Sale and Rent</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-400">Initial Availability</label>
+                    <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm font-bold text-emerald-300">
+                      Available
+                    </div>
+                    <p className="mt-2 text-xs text-gray-500">Admin can update this status during review.</p>
+                  </div>
+
+                  {includesRent && (
+                    <>
+                      <div>
+                        <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-400">Rental Price (₹)</label>
+                        <input
+                          type="number"
+                          name="rentalPrice"
+                          value={formData.rentalPrice}
+                          onChange={handleChange}
+                          className="w-full rounded-lg border border-gray-700 bg-[#1b2128] p-3 text-white placeholder-gray-500 outline-none transition-colors focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                          placeholder="Rental price"
+                          min="0"
+                          step="0.01"
+                          required
+                        />
+                        {formErrors.rentalPrice && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.rentalPrice}</p>}
+                      </div>
+
+                      <div>
+                        <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-400">Rent Period</label>
+                        <select
+                          name="rentPeriod"
+                          value={formData.rentPeriod}
+                          onChange={handleChange}
+                          className="w-full rounded-lg border border-gray-700 bg-[#1b2128] p-3 text-white outline-none transition-colors focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                          required
+                        >
+                          {rentPeriods.map((period) => (
+                            <option key={period} value={period}>Per {period}</option>
+                          ))}
+                        </select>
+                        {formErrors.rentPeriod && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.rentPeriod}</p>}
+                      </div>
+
+                      <div>
+                        <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-400">Security Deposit (₹)</label>
+                        <input
+                          type="number"
+                          name="securityDeposit"
+                          value={formData.securityDeposit}
+                          onChange={handleChange}
+                          className="w-full rounded-lg border border-gray-700 bg-[#1b2128] p-3 text-white placeholder-gray-500 outline-none transition-colors focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                          placeholder="Optional security deposit"
+                          min="0"
+                          step="0.01"
+                        />
+                        {formErrors.securityDeposit && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.securityDeposit}</p>}
+                      </div>
+                    </>
+                  )}
+
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-400">Expected Available Date</label>
+                    <input
+                      type="date"
+                      name="availableFrom"
+                      value={formData.availableFrom}
+                      onChange={handleChange}
+                      className="w-full rounded-lg border border-gray-700 bg-[#1b2128] p-3 text-white outline-none transition-colors focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-400">Availability Note</label>
+                    <textarea
+                      name="availabilityNote"
+                      value={formData.availabilityNote}
+                      onChange={handleChange}
+                      rows="3"
+                      className="w-full rounded-lg border border-gray-700 bg-[#1b2128] p-3 text-white placeholder-gray-500 outline-none transition-colors focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                      placeholder="Optional availability or rental note"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="rounded-xl border border-gray-800 bg-[#111b2b] p-5">
               <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

@@ -4,6 +4,18 @@ import axios from '../utils/axiosInstance';
 import { toast } from 'react-hot-toast';
 import AdminLayout from '../components/AdminLayout';
 import { CUSTOMER_ROLE, EMPLOYEE_ROLE } from '../utils/roles';
+import {
+  formatProductCurrency,
+  formatProductDate,
+  getAvailabilityBadgeClass,
+  getConditionBadgeClass,
+  getOfferBadgeClass,
+  getProductAvailabilityLabel,
+  getProductConditionLabel,
+  getProductOfferLabel,
+  getProductOfferSummary,
+  isSecondHandProduct,
+} from '../utils/productDisplay';
 
 const LOW_STOCK_THRESHOLD = 5;
 
@@ -53,7 +65,7 @@ const AdminDashboard = () => {
       approvedRequestsResult,
       rejectedRequestsResult,
     ] = await Promise.allSettled([
-      axios.get('/api/products'),
+      axios.get('/api/products/inventory'),
       axios.get('/api/users'),
       axios.get('/api/pending-products/admin?status=pending'),
       axios.get('/api/pending-products/admin?status=approved'),
@@ -259,6 +271,9 @@ const AdminDashboard = () => {
         product.type,
         product.size,
         product.description,
+        product.condition,
+        product.availabilityType,
+        product.availabilityStatus,
       ];
 
       return searchableFields.some((field) =>
@@ -471,18 +486,30 @@ const AdminDashboard = () => {
                         <div className="min-w-0 flex-1">
                           <div className="font-bold text-gray-100 break-words">{product.name}</div>
                           <div className="text-xs text-gray-500 mt-1 uppercase tracking-wide">{product.brand || 'No Brand'}</div>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <span className={`inline-flex rounded-full border px-2 py-1 text-xs font-bold uppercase ${getConditionBadgeClass(product)}`}>
+                              {getProductConditionLabel(product)}
+                            </span>
+                            <span className={`inline-flex rounded-full border px-2 py-1 text-xs font-bold uppercase ${getOfferBadgeClass(product)}`}>
+                              {getProductOfferLabel(product)}
+                            </span>
+                          </div>
                           <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
                             <div>
                               <span className="block text-xs font-bold uppercase tracking-wider text-gray-500">Category</span>
                               <span className="text-gray-300 break-words">{product.category || 'Uncategorized'}</span>
                             </div>
                             <div>
-                              <span className="block text-xs font-bold uppercase tracking-wider text-gray-500">Price</span>
-                              <span className="font-bold text-blue-400">₹{product.price}</span>
+                              <span className="block text-xs font-bold uppercase tracking-wider text-gray-500">Offer</span>
+                              <span className="font-bold text-blue-400">{getProductOfferSummary(product)}</span>
                             </div>
                           </div>
-                          <span className={`mt-3 inline-flex px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${product.stock > 0 ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
-                            {product.stock > 0 ? `${product.stock} IN STOCK` : 'OUT OF STOCK'}
+                          <span className={`mt-3 inline-flex rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide ${isSecondHandProduct(product) ? getAvailabilityBadgeClass(product) : product.stock > 0 ? 'border-green-500/20 bg-green-500/10 text-green-400' : 'border-red-500/20 bg-red-500/10 text-red-400'}`}>
+                            {isSecondHandProduct(product)
+                              ? getProductAvailabilityLabel(product)
+                              : product.stock > 0
+                                ? `${product.stock} IN STOCK`
+                                : 'OUT OF STOCK'}
                           </span>
                         </div>
                       </div>
@@ -497,8 +524,8 @@ const AdminDashboard = () => {
                         <th className="px-6 py-4 font-bold">Image</th>
                         <th className="px-6 py-4 font-bold">Name</th>
                         <th className="px-6 py-4 font-bold">Category</th>
-                        <th className="px-6 py-4 font-bold">Price</th>
-                        <th className="px-6 py-4 font-bold">Stock</th>
+                        <th className="px-6 py-4 font-bold">Offer</th>
+                        <th className="px-6 py-4 font-bold">Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-800">
@@ -522,12 +549,24 @@ const AdminDashboard = () => {
                           <td className="px-6 py-4">
                             <div className="font-bold text-gray-100">{product.name}</div>
                             <div className="text-xs text-gray-500 mt-1 uppercase tracking-wide">{product.brand || 'No Brand'}</div>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              <span className={`inline-flex rounded-full border px-2 py-1 text-xs font-bold uppercase ${getConditionBadgeClass(product)}`}>
+                                {getProductConditionLabel(product)}
+                              </span>
+                              <span className={`inline-flex rounded-full border px-2 py-1 text-xs font-bold uppercase ${getOfferBadgeClass(product)}`}>
+                                {getProductOfferLabel(product)}
+                              </span>
+                            </div>
                           </td>
                           <td className="px-6 py-4 text-gray-400">{product.category || 'Uncategorized'}</td>
-                          <td className="px-6 py-4 font-bold text-blue-400">₹{product.price}</td>
+                          <td className="max-w-[260px] px-6 py-4 font-bold text-blue-400">{getProductOfferSummary(product)}</td>
                           <td className="px-6 py-4">
-                            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${product.stock > 0 ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
-                              {product.stock > 0 ? `${product.stock} IN STOCK` : 'OUT OF STOCK'}
+                            <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold uppercase tracking-wide ${isSecondHandProduct(product) ? getAvailabilityBadgeClass(product) : product.stock > 0 ? 'border-green-500/20 bg-green-500/10 text-green-400' : 'border-red-500/20 bg-red-500/10 text-red-400'}`}>
+                              {isSecondHandProduct(product)
+                                ? getProductAvailabilityLabel(product)
+                                : product.stock > 0
+                                  ? `${product.stock} IN STOCK`
+                                  : 'OUT OF STOCK'}
                             </span>
                           </td>
                         </tr>
@@ -550,7 +589,7 @@ const AdminDashboard = () => {
                 {/* Modal Header */}
                 <div className="px-6 py-4 border-b border-gray-800 flex justify-between items-center bg-[#1b2128] shrink-0">
                   <h3 className="text-xl font-bold text-white">Product Details</h3>
-                  <button onClick={closeModal} className="text-gray-400 hover:text-white transition-colors text-2xl font-bold bg-transparent border-none cursor-pointer">×</button>
+                  <button type="button" onClick={closeModal} aria-label="Close product details" className="text-gray-400 hover:text-white transition-colors text-2xl font-bold bg-transparent border-none cursor-pointer">×</button>
                 </div>
                 
                 {/* Modal Body */}
@@ -589,13 +628,41 @@ const AdminDashboard = () => {
                          <div>
                            <h2 className="text-3xl font-black text-white">{selectedProduct.name}</h2>
                            {selectedProduct.brand && <span className="inline-block mt-2 px-3 py-1 bg-gray-800 text-gray-300 text-xs font-bold uppercase rounded-md">{selectedProduct.brand}</span>}
+                           <div className="mt-3 flex flex-wrap gap-2">
+                             <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold uppercase ${getConditionBadgeClass(selectedProduct)}`}>
+                               {getProductConditionLabel(selectedProduct)}
+                             </span>
+                             <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold uppercase ${getOfferBadgeClass(selectedProduct)}`}>
+                               {getProductOfferLabel(selectedProduct)}
+                             </span>
+                             <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold uppercase ${getAvailabilityBadgeClass(selectedProduct)}`}>
+                               {getProductAvailabilityLabel(selectedProduct)}
+                             </span>
+                           </div>
                          </div>
                          
-                         <div className="flex items-center space-x-3">
-                           <span className="text-2xl font-bold text-blue-500">₹{selectedProduct.price}</span>
-                           <span className={`px-2 py-1 rounded text-xs font-bold uppercase ${selectedProduct.stock > 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                             {selectedProduct.stock > 0 ? `${selectedProduct.stock} In Stock` : 'Out of Stock'}
-                           </span>
+                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                           {['sale', 'both'].includes(selectedProduct.availabilityType || 'sale') && (
+                             <div className="rounded-lg border border-gray-800 bg-[#111b2b] p-3">
+                               <span className="block text-xs font-bold uppercase text-gray-500">Sale Price</span>
+                               <span className="mt-1 block text-xl font-bold text-blue-400">{formatProductCurrency(selectedProduct.price)}</span>
+                             </div>
+                           )}
+                           {['rent', 'both'].includes(selectedProduct.availabilityType) && (
+                             <div className="rounded-lg border border-gray-800 bg-[#111b2b] p-3">
+                               <span className="block text-xs font-bold uppercase text-gray-500">Rental Price</span>
+                               <span className="mt-1 block text-xl font-bold text-violet-300">
+                                 {formatProductCurrency(selectedProduct.rentalPrice)} / {selectedProduct.rentPeriod || 'period'}
+                               </span>
+                             </div>
+                           )}
+                           {!isSecondHandProduct(selectedProduct) && (
+                             <div className="sm:col-span-2">
+                               <span className={`inline-flex rounded border px-3 py-1 text-xs font-bold uppercase ${selectedProduct.stock > 0 ? 'border-green-500/20 bg-green-500/10 text-green-400' : 'border-red-500/20 bg-red-500/10 text-red-400'}`}>
+                                 {selectedProduct.stock > 0 ? `${selectedProduct.stock} In Stock` : 'Out of Stock'}
+                               </span>
+                             </div>
+                           )}
                          </div>
                          
                          <div className="bg-[#1b2128] p-4 rounded-xl border border-gray-800 space-y-3">
@@ -620,8 +687,41 @@ const AdminDashboard = () => {
                                  <span className="block text-gray-500 uppercase tracking-wider text-xs font-bold">Size</span>
                                  <span className="text-gray-200">{selectedProduct.size || '-'}</span>
                                </div>
+                               <div>
+                                 <span className="block text-gray-500 uppercase tracking-wider text-xs font-bold">Condition</span>
+                                 <span className="text-gray-200">{getProductConditionLabel(selectedProduct)}</span>
+                               </div>
+                               <div>
+                                 <span className="block text-gray-500 uppercase tracking-wider text-xs font-bold">Offer Type</span>
+                                 <span className="text-gray-200">{getProductOfferLabel(selectedProduct)}</span>
+                               </div>
+                               <div>
+                                 <span className="block text-gray-500 uppercase tracking-wider text-xs font-bold">Availability</span>
+                                 <span className="text-gray-200">{getProductAvailabilityLabel(selectedProduct)}</span>
+                               </div>
+                               {['rent', 'both'].includes(selectedProduct.availabilityType) && (
+                                 <div>
+                                   <span className="block text-gray-500 uppercase tracking-wider text-xs font-bold">Security Deposit</span>
+                                   <span className="text-gray-200">{formatProductCurrency(selectedProduct.securityDeposit || 0)}</span>
+                                 </div>
+                               )}
+                               {selectedProduct.availableFrom && (
+                                 <div>
+                                   <span className="block text-gray-500 uppercase tracking-wider text-xs font-bold">Expected Available</span>
+                                   <span className="text-gray-200">{formatProductDate(selectedProduct.availableFrom)}</span>
+                                 </div>
+                               )}
                             </div>
                          </div>
+
+                         {selectedProduct.availabilityNote && (
+                           <div className="space-y-2">
+                             <span className="block text-gray-500 uppercase tracking-wider text-xs font-bold">Availability Note</span>
+                             <div className="whitespace-pre-wrap rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 text-sm leading-relaxed text-amber-100">
+                               {selectedProduct.availabilityNote}
+                             </div>
+                           </div>
+                         )}
                          
                          <div className="space-y-2">
                            <span className="block text-gray-500 uppercase tracking-wider text-xs font-bold">Description</span>

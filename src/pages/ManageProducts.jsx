@@ -4,6 +4,82 @@ import { toast } from 'react-hot-toast';
 import AdminLayout from '../components/AdminLayout';
 
 const productTypes = ['machine', 'part', 'tool', 'accessory', 'spare'];
+const rentPeriods = ['day', 'week', 'month'];
+const conditionOptions = ['new', 'used'];
+const availabilityTypeOptions = ['sale', 'rent', 'both'];
+const availabilityStatusOptions = ['available', 'on_rent', 'unavailable', 'sold'];
+
+const initialFormData = {
+  name: '',
+  type: '',
+  category: '',
+  subCategory: '',
+  brand: '',
+  description: '',
+  size: '',
+  model: '',
+  price: '',
+  stock: '',
+  condition: 'new',
+  availabilityType: 'sale',
+  rentalPrice: '',
+  rentPeriod: '',
+  securityDeposit: '',
+  availabilityStatus: 'available',
+  availableFrom: '',
+  availabilityNote: '',
+};
+
+const defaultListingFields = {
+  condition: 'new',
+  availabilityType: 'sale',
+  rentalPrice: '',
+  rentPeriod: '',
+  securityDeposit: '',
+  availabilityStatus: 'available',
+  availableFrom: '',
+  availabilityNote: '',
+};
+
+const getDateInputValue = (value) => {
+  if (!value) return '';
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 10);
+};
+
+const formatCurrency = (value) =>
+  Number(value || 0).toLocaleString('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 2,
+  });
+
+const getOfferSummary = (product) => {
+  const availabilityType = product.availabilityType || 'sale';
+  const salePrice = formatCurrency(product.price);
+  const rentalPrice = `${formatCurrency(product.rentalPrice)} / ${product.rentPeriod || 'period'}`;
+
+  if (availabilityType === 'rent') return rentalPrice;
+  if (availabilityType === 'both') return `${salePrice} | ${rentalPrice}`;
+  return salePrice;
+};
+
+const getAvailabilityBadgeClass = (status) => {
+  const statusStyles = {
+    available: 'border-green-500/30 bg-green-500/10 text-green-300',
+    on_rent: 'border-blue-500/30 bg-blue-500/10 text-blue-300',
+    unavailable: 'border-gray-500/30 bg-gray-500/10 text-gray-300',
+    sold: 'border-amber-500/30 bg-amber-500/10 text-amber-300',
+  };
+
+  return statusStyles[status] || statusStyles.available;
+};
+
+const getDisplayLabel = (value) =>
+  value === 'on_rent'
+    ? 'On Rent'
+    : value.charAt(0).toUpperCase() + value.slice(1);
 
 const ManageProducts = () => {
   const [products, setProducts] = useState([]);
@@ -16,11 +92,7 @@ const ManageProducts = () => {
   const [isUpdating, setIsUpdating] = useState(false);
 
   // Form State for Editing
-  const [formData, setFormData] = useState({
-    name: '', type: '', category: '', subCategory: '',
-    brand: '', description: '', size: '', model: '',
-    price: '', stock: ''
-  });
+  const [formData, setFormData] = useState(initialFormData);
   const [newImages, setNewImages] = useState([]); // File objects for new images
   const [existingImages, setExistingImages] = useState([]); // URLs for display
   const [formErrors, setFormErrors] = useState({});
@@ -29,8 +101,14 @@ const ManageProducts = () => {
     type: 'all',
     category: 'all',
     brand: 'all',
+    condition: 'all',
+    availabilityType: 'all',
+    availabilityStatus: 'all',
     stock: 'all',
   });
+  const isUsedMachine = formData.type === 'machine' && formData.condition === 'used';
+  const includesSale = !isUsedMachine || ['sale', 'both'].includes(formData.availabilityType);
+  const includesRent = isUsedMachine && ['rent', 'both'].includes(formData.availabilityType);
 
   const filterOptions = useMemo(() => {
     const normalizeOptions = (values) =>
@@ -57,6 +135,9 @@ const ManageProducts = () => {
         product.type,
         product.model,
         product.size,
+        product.condition,
+        product.availabilityType,
+        product.availabilityStatus,
       ]
         .filter(Boolean)
         .join(' ')
@@ -68,12 +149,29 @@ const ManageProducts = () => {
       const matchesCategory =
         filters.category === 'all' || product.category === filters.category;
       const matchesBrand = filters.brand === 'all' || product.brand === filters.brand;
+      const matchesCondition =
+        filters.condition === 'all' || (product.condition || 'new') === filters.condition;
+      const matchesAvailabilityType =
+        filters.availabilityType === 'all' ||
+        (product.availabilityType || 'sale') === filters.availabilityType;
+      const matchesAvailabilityStatus =
+        filters.availabilityStatus === 'all' ||
+        (product.availabilityStatus || 'available') === filters.availabilityStatus;
       const matchesStock =
         filters.stock === 'all' ||
         (filters.stock === 'in-stock' && stockValue > 0) ||
         (filters.stock === 'out-of-stock' && stockValue <= 0);
 
-      return matchesSearch && matchesType && matchesCategory && matchesBrand && matchesStock;
+      return (
+        matchesSearch &&
+        matchesType &&
+        matchesCategory &&
+        matchesBrand &&
+        matchesCondition &&
+        matchesAvailabilityType &&
+        matchesAvailabilityStatus &&
+        matchesStock
+      );
     });
   }, [filters, products]);
 
@@ -91,6 +189,9 @@ const ManageProducts = () => {
       type: 'all',
       category: 'all',
       brand: 'all',
+      condition: 'all',
+      availabilityType: 'all',
+      availabilityStatus: 'all',
       stock: 'all',
     });
   };
@@ -101,7 +202,7 @@ const ManageProducts = () => {
 
   const fetchProducts = async () => {
     try {
-      const response = await axios.get('/api/products');
+      const response = await axios.get('/api/products/inventory');
       setProducts(response.data);
       setLoading(false);
     } catch (error) {
@@ -148,8 +249,16 @@ const ManageProducts = () => {
       description: product.description || '',
       size: product.size || '',
       model: product.model || '',
-      price: product.price || '',
-      stock: product.stock || ''
+      price: product.price ?? '',
+      stock: product.stock ?? '',
+      condition: product.condition || 'new',
+      availabilityType: product.availabilityType || 'sale',
+      rentalPrice: product.rentalPrice ?? '',
+      rentPeriod: product.rentPeriod || '',
+      securityDeposit: product.securityDeposit ?? '',
+      availabilityStatus: product.availabilityStatus || 'available',
+      availableFrom: getDateInputValue(product.availableFrom),
+      availabilityNote: product.availabilityNote || '',
     });
     setExistingImages(product.images || []);
     setNewImages([]);
@@ -158,7 +267,7 @@ const ManageProducts = () => {
 
   const closeEditModal = () => {
     setEditingProduct(null);
-    setFormData({});
+    setFormData(initialFormData);
     setNewImages([]);
     setExistingImages([]);
     setFormErrors({});
@@ -166,8 +275,59 @@ const ManageProducts = () => {
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData((currentData) => {
+      if (name === 'type' && value !== 'machine') {
+        return {
+          ...currentData,
+          type: value,
+          ...defaultListingFields,
+          stock: currentData.condition === 'used' ? '' : currentData.stock,
+        };
+      }
+
+      return { ...currentData, [name]: value };
+    });
     setFormErrors((currentErrors) => ({ ...currentErrors, [name]: '' }));
+  };
+
+  const handleConditionChange = (condition) => {
+    setFormData((currentData) => ({
+      ...currentData,
+      ...defaultListingFields,
+      condition,
+      stock: condition === 'used' ? '1' : '',
+    }));
+    setFormErrors({});
+  };
+
+  const handleAvailabilityTypeChange = (event) => {
+    const availabilityType = event.target.value;
+
+    setFormData((currentData) => {
+      let availabilityStatus = currentData.availabilityStatus;
+      if (availabilityType === 'sale' && availabilityStatus === 'on_rent') {
+        availabilityStatus = 'available';
+      }
+      if (availabilityType === 'rent' && availabilityStatus === 'sold') {
+        availabilityStatus = 'available';
+      }
+
+      return {
+        ...currentData,
+        availabilityType,
+        availabilityStatus,
+        rentPeriod:
+          ['rent', 'both'].includes(availabilityType) && !currentData.rentPeriod
+            ? 'month'
+            : currentData.rentPeriod,
+      };
+    });
+    setFormErrors((currentErrors) => ({
+      ...currentErrors,
+      price: '',
+      rentalPrice: '',
+      rentPeriod: '',
+    }));
   };
 
   const handleImageChange = (e) => {
@@ -176,7 +336,7 @@ const ManageProducts = () => {
     const selectedFiles = Array.from(e.target.files || []);
     if (selectedFiles.length === 0) return;
 
-    setNewImages([...newImages, ...selectedFiles]);
+    setNewImages((currentImages) => [...currentImages, ...selectedFiles].slice(0, 5));
     e.target.value = '';
   };
 
@@ -190,8 +350,21 @@ const ManageProducts = () => {
     if (!formData.name?.trim()) errors.name = 'Product name is required.';
     if (!formData.type) errors.type = 'Product type is required.';
     if (!formData.category?.trim()) errors.category = 'Category is required.';
-    if (!formData.price || Number(formData.price) < 0) errors.price = 'Enter a valid price.';
-    if (formData.stock && Number(formData.stock) < 0) errors.stock = 'Stock cannot be negative.';
+    if (includesSale && (!formData.price || Number(formData.price) <= 0)) {
+      errors.price = 'Sale price must be greater than zero.';
+    }
+    if (includesRent && (!formData.rentalPrice || Number(formData.rentalPrice) <= 0)) {
+      errors.rentalPrice = 'Rental price must be greater than zero.';
+    }
+    if (includesRent && !formData.rentPeriod) {
+      errors.rentPeriod = 'Select a rent period.';
+    }
+    if (formData.securityDeposit && Number(formData.securityDeposit) < 0) {
+      errors.securityDeposit = 'Security deposit cannot be negative.';
+    }
+    if (!isUsedMachine && formData.stock && Number(formData.stock) < 0) {
+      errors.stock = 'Stock cannot be negative.';
+    }
 
     return errors;
   };
@@ -207,8 +380,19 @@ const ManageProducts = () => {
     }
 
     const productData = new FormData();
-    Object.keys(formData).forEach((key) => {
-      productData.append(key, formData[key]);
+    const submissionData = isUsedMachine
+      ? {
+          ...formData,
+          price: includesSale ? formData.price : '',
+          rentalPrice: includesRent ? formData.rentalPrice : '',
+          rentPeriod: includesRent ? formData.rentPeriod : '',
+          securityDeposit: includesRent ? formData.securityDeposit : '',
+          stock: '1',
+        }
+      : { ...formData, ...defaultListingFields };
+
+    Object.keys(submissionData).forEach((key) => {
+      productData.append(key, submissionData[key]);
     });
 
     // Append new images
@@ -255,7 +439,7 @@ const ManageProducts = () => {
                   </button>
                 </div>
 
-                <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-[2fr_1fr_1fr_1fr_1fr]">
+                <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                   <div>
                     <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-500">Search</label>
                     <input
@@ -279,6 +463,53 @@ const ManageProducts = () => {
                       <option value="all">All Types</option>
                       {filterOptions.types.map((type) => (
                         <option key={type} value={type}>{type}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-500">Condition</label>
+                    <select
+                      name="condition"
+                      value={filters.condition}
+                      onChange={handleFilterChange}
+                      className="w-full rounded-lg border border-gray-700 bg-[#1b2128] px-4 py-3 text-sm text-white outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value="all">All Conditions</option>
+                      {conditionOptions.map((condition) => (
+                        <option key={condition} value={condition}>{getDisplayLabel(condition)}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-500">Offer Type</label>
+                    <select
+                      name="availabilityType"
+                      value={filters.availabilityType}
+                      onChange={handleFilterChange}
+                      className="w-full rounded-lg border border-gray-700 bg-[#1b2128] px-4 py-3 text-sm text-white outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value="all">All Offers</option>
+                      {availabilityTypeOptions.map((availabilityType) => (
+                        <option key={availabilityType} value={availabilityType}>
+                          {availabilityType === 'both' ? 'Sale and Rent' : getDisplayLabel(availabilityType)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-gray-500">Availability</label>
+                    <select
+                      name="availabilityStatus"
+                      value={filters.availabilityStatus}
+                      onChange={handleFilterChange}
+                      className="w-full rounded-lg border border-gray-700 bg-[#1b2128] px-4 py-3 text-sm text-white outline-none transition focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    >
+                      <option value="all">All Statuses</option>
+                      {availabilityStatusOptions.map((status) => (
+                        <option key={status} value={status}>{getDisplayLabel(status)}</option>
                       ))}
                     </select>
                   </div>
@@ -353,10 +584,25 @@ const ManageProducts = () => {
                         <div className="min-w-0 flex-1">
                           <div className="font-bold text-gray-100 break-words">{product.name}</div>
                           <div className="text-xs text-gray-500 mt-1 uppercase tracking-wide">{product.brand || 'No Brand'}</div>
+                          <span className={`mt-2 inline-flex rounded-full border px-2 py-1 text-xs font-bold uppercase ${product.condition === 'used' ? 'border-amber-500/30 bg-amber-500/10 text-amber-300' : 'border-blue-500/30 bg-blue-500/10 text-blue-300'}`}>
+                            {product.condition === 'used' ? 'Second-Hand' : 'New'}
+                          </span>
                           <div className="mt-3">
                             <span className="block text-xs font-bold uppercase tracking-wider text-gray-500">Category</span>
                             <span className="text-gray-300 break-words">{product.category || 'Uncategorized'}</span>
                           </div>
+                        </div>
+                      </div>
+                      <div className="mt-4 grid grid-cols-1 gap-3 rounded-lg border border-gray-800 bg-[#111b2b] p-3 sm:grid-cols-2">
+                        <div>
+                          <span className="block text-xs font-bold uppercase tracking-wider text-gray-500">Offer</span>
+                          <span className="mt-1 block text-sm font-bold text-gray-200">{getOfferSummary(product)}</span>
+                        </div>
+                        <div>
+                          <span className="block text-xs font-bold uppercase tracking-wider text-gray-500">Availability</span>
+                          <span className={`mt-1 inline-flex rounded-full border px-2 py-1 text-xs font-bold uppercase ${getAvailabilityBadgeClass(product.availabilityStatus || 'available')}`}>
+                            {getDisplayLabel(product.availabilityStatus || 'available')}
+                          </span>
                         </div>
                       </div>
                       <div className="mt-4 grid grid-cols-2 gap-3">
@@ -383,6 +629,8 @@ const ManageProducts = () => {
                       <tr className="bg-[#1b2128] text-gray-400 text-xs uppercase tracking-wider border-b border-gray-700">
                         <th className="px-6 py-4 font-bold">Image</th>
                         <th className="px-6 py-4 font-bold">Name</th>
+                        <th className="px-6 py-4 font-bold">Offer</th>
+                        <th className="px-6 py-4 font-bold">Availability</th>
                         <th className="px-6 py-4 font-bold">Category</th>
                         <th className="px-6 py-4 font-bold text-right">Actions</th>
                       </tr>
@@ -404,6 +652,15 @@ const ManageProducts = () => {
                           <td className="px-6 py-4">
                             <div className="font-bold text-gray-100">{product.name}</div>
                             <div className="text-xs text-gray-500 mt-1 uppercase tracking-wide">{product.brand || 'No Brand'}</div>
+                            <span className={`mt-2 inline-flex rounded-full border px-2 py-1 text-xs font-bold uppercase ${product.condition === 'used' ? 'border-amber-500/30 bg-amber-500/10 text-amber-300' : 'border-blue-500/30 bg-blue-500/10 text-blue-300'}`}>
+                              {product.condition === 'used' ? 'Second-Hand' : 'New'}
+                            </span>
+                          </td>
+                          <td className="max-w-[240px] px-6 py-4 text-sm font-bold text-gray-200">{getOfferSummary(product)}</td>
+                          <td className="px-6 py-4">
+                            <span className={`inline-flex rounded-full border px-2 py-1 text-xs font-bold uppercase ${getAvailabilityBadgeClass(product.availabilityStatus || 'available')}`}>
+                              {getDisplayLabel(product.availabilityStatus || 'available')}
+                            </span>
                           </td>
                           <td className="px-6 py-4 text-gray-400">{product.category || 'Uncategorized'}</td>
                           <td className="px-6 py-4 text-right">
@@ -436,7 +693,7 @@ const ManageProducts = () => {
             {/* Modal Header */}
             <div className="px-6 py-4 border-b border-gray-800 flex justify-between items-center bg-[#1b2128]">
               <h2 className="text-xl font-bold text-white tracking-wide">Edit Product</h2>
-              <button onClick={closeEditModal} className="text-gray-400 hover:text-white text-2xl font-bold">&times;</button>
+              <button type="button" onClick={closeEditModal} aria-label="Close product editor" className="text-gray-400 hover:text-white text-2xl font-bold">&times;</button>
             </div>
             
             {/* Modal Body */}
@@ -465,6 +722,39 @@ const ManageProducts = () => {
                     </select>
                     {formErrors.type && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.type}</p>}
                   </div>
+                  {formData.type === 'machine' && (
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Machine Condition</label>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" role="group" aria-label="Machine condition">
+                        <button
+                          type="button"
+                          onClick={() => handleConditionChange('new')}
+                          aria-pressed={formData.condition === 'new'}
+                          className={`rounded-lg border p-4 text-left transition-colors ${
+                            formData.condition === 'new'
+                              ? 'border-blue-500 bg-blue-600/15 text-white'
+                              : 'border-gray-700 bg-[#1b2128] text-gray-300 hover:border-gray-500'
+                          }`}
+                        >
+                          <span className="block font-bold">New Machine</span>
+                          <span className="mt-1 block text-xs text-gray-400">Standard sale listing.</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleConditionChange('used')}
+                          aria-pressed={formData.condition === 'used'}
+                          className={`rounded-lg border p-4 text-left transition-colors ${
+                            formData.condition === 'used'
+                              ? 'border-amber-500 bg-amber-500/10 text-white'
+                              : 'border-gray-700 bg-[#1b2128] text-gray-300 hover:border-gray-500'
+                          }`}
+                        >
+                          <span className="block font-bold">Second-Hand Machine</span>
+                          <span className="mt-1 block text-xs text-gray-400">Sale, rental, or combined listing.</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   {/* Category */}
                   <div>
                     <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Category</label>
@@ -482,11 +772,15 @@ const ManageProducts = () => {
                     <input type="text" name="brand" value={formData.brand} onChange={handleFormChange} className="w-full p-3 bg-[#1b2128] border border-gray-700 rounded-lg text-white" />
                   </div>
                   {/* Price */}
-                  <div>
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Price (₹)</label>
-                    <input type="number" name="price" value={formData.price} onChange={handleFormChange} required className="w-full p-3 bg-[#1b2128] border border-gray-700 rounded-lg text-white" />
-                    {formErrors.price && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.price}</p>}
-                  </div>
+                  {includesSale && (
+                    <div>
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                        {isUsedMachine ? 'Sale Price (₹)' : 'Price (₹)'}
+                      </label>
+                      <input type="number" name="price" min="0" step="0.01" value={formData.price} onChange={handleFormChange} required className="w-full p-3 bg-[#1b2128] border border-gray-700 rounded-lg text-white" />
+                      {formErrors.price && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.price}</p>}
+                    </div>
+                  )}
                   {/* Size */}
                   <div>
                     <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Size</label>
@@ -498,12 +792,80 @@ const ManageProducts = () => {
                     <input type="text" name="model" value={formData.model} onChange={handleFormChange} className="w-full p-3 bg-[#1b2128] border border-gray-700 rounded-lg text-white" />
                   </div>
                   {/* Stock */}
-                  <div>
-                    <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Stock Inventory</label>
-                    <input type="number" name="stock" value={formData.stock} onChange={handleFormChange} className="w-full p-3 bg-[#1b2128] border border-gray-700 rounded-lg text-white" />
-                    {formErrors.stock && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.stock}</p>}
-                  </div>
+                  {!isUsedMachine && (
+                    <div>
+                      <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Stock Inventory</label>
+                      <input type="number" name="stock" min="0" value={formData.stock} onChange={handleFormChange} className="w-full p-3 bg-[#1b2128] border border-gray-700 rounded-lg text-white" />
+                      {formErrors.stock && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.stock}</p>}
+                    </div>
+                  )}
                 </div>
+
+                {isUsedMachine && (
+                  <div className="space-y-5 border-y border-gray-800 py-6">
+                    <div>
+                      <h3 className="text-lg font-bold text-white">Second-Hand Listing</h3>
+                      <p className="mt-1 text-sm text-gray-500">Update offer terms and live machine availability.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Available For</label>
+                        <select name="availabilityType" value={formData.availabilityType} onChange={handleAvailabilityTypeChange} className="w-full p-3 bg-[#1b2128] border border-gray-700 rounded-lg text-white focus:border-amber-500 focus:outline-none">
+                          <option value="sale">Sale</option>
+                          <option value="rent">Rent</option>
+                          <option value="both">Sale and Rent</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Availability Status</label>
+                        <select name="availabilityStatus" value={formData.availabilityStatus} onChange={handleFormChange} className="w-full p-3 bg-[#1b2128] border border-gray-700 rounded-lg text-white focus:border-amber-500 focus:outline-none">
+                          <option value="available">Available</option>
+                          {includesRent && <option value="on_rent">On Rent</option>}
+                          <option value="unavailable">Unavailable</option>
+                          {includesSale && <option value="sold">Sold</option>}
+                        </select>
+                      </div>
+
+                      {includesRent && (
+                        <>
+                          <div>
+                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Rental Price (₹)</label>
+                            <input type="number" name="rentalPrice" min="0" step="0.01" value={formData.rentalPrice} onChange={handleFormChange} className="w-full p-3 bg-[#1b2128] border border-gray-700 rounded-lg text-white focus:border-amber-500 focus:outline-none" />
+                            {formErrors.rentalPrice && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.rentalPrice}</p>}
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Rent Period</label>
+                            <select name="rentPeriod" value={formData.rentPeriod} onChange={handleFormChange} className="w-full p-3 bg-[#1b2128] border border-gray-700 rounded-lg text-white focus:border-amber-500 focus:outline-none">
+                              {rentPeriods.map((period) => (
+                                <option key={period} value={period}>Per {period}</option>
+                              ))}
+                            </select>
+                            {formErrors.rentPeriod && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.rentPeriod}</p>}
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Security Deposit (₹)</label>
+                            <input type="number" name="securityDeposit" min="0" step="0.01" value={formData.securityDeposit} onChange={handleFormChange} className="w-full p-3 bg-[#1b2128] border border-gray-700 rounded-lg text-white focus:border-amber-500 focus:outline-none" />
+                            {formErrors.securityDeposit && <p className="mt-2 text-xs font-bold text-red-400">{formErrors.securityDeposit}</p>}
+                          </div>
+                        </>
+                      )}
+
+                      <div>
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Expected Available Date</label>
+                        <input type="date" name="availableFrom" value={formData.availableFrom} onChange={handleFormChange} className="w-full p-3 bg-[#1b2128] border border-gray-700 rounded-lg text-white focus:border-amber-500 focus:outline-none" />
+                      </div>
+
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Availability Note</label>
+                        <textarea name="availabilityNote" value={formData.availabilityNote} onChange={handleFormChange} rows="3" className="w-full p-3 bg-[#1b2128] border border-gray-700 rounded-lg text-white focus:border-amber-500 focus:outline-none" />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* Description */}
                 <div>
