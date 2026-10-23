@@ -22,7 +22,10 @@ const adminNavItems = [
   { label: 'Add Product', to: '/admin/add-product' },
   { label: 'Employees', to: '/admin/employees' },
   { label: 'Customers', to: '/admin/customers' },
+  { label: 'Rentals', to: '/admin/rentals' },
+  { label: 'Sales', to: '/admin/sales' },
   { label: 'Enquiries', to: '/admin/enquiries' },
+  { label: 'Reminders', to: '/admin/reminders' },
   { label: 'Demand Report', to: '/admin/demand-report' },
   { label: 'Pending Products', to: '/admin/pending-products' },
 ];
@@ -88,7 +91,7 @@ const AdminLayout = ({ children }) => {
           </span>
         </div>
 
-        <nav className="flex-1 px-4 py-8 space-y-4">
+        <nav className="flex-1 overflow-y-auto px-4 py-8 space-y-4">
           <div className="text-xs uppercase text-gray-500 font-bold tracking-widest pl-3 mb-2">Menu</div>
           {navItems.map((item) => (
             <NavLink

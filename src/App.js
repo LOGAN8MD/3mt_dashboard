@@ -12,6 +12,9 @@ import ManageProducts from './pages/ManageProducts';
 import ManageUsers from './pages/ManageUsers';
 import ManageCustomers from './pages/ManageCustomers';
 import ManageEnquiries from './pages/ManageEnquiries';
+import ManageReminders from './pages/ManageReminders';
+import ManageRentals from './pages/ManageRentals';
+import ManageSales from './pages/ManageSales';
 import ProductDemandReport from './pages/ProductDemandReport';
 import PendingProducts from './pages/PendingProducts';
 import UserDashboard from './pages/UserDashboard';
@@ -41,6 +44,9 @@ const App = () => {
             <Route path="/admin/employees" element={<ManageUsers />} />
             <Route path="/admin/customers" element={<ManageCustomers />} />
             <Route path="/admin/enquiries" element={<ManageEnquiries />} />
+            <Route path="/admin/reminders" element={<ManageReminders />} />
+            <Route path="/admin/rentals" element={<ManageRentals />} />
+            <Route path="/admin/sales" element={<ManageSales />} />
             <Route path="/admin/demand-report" element={<ProductDemandReport />} />
             <Route path="/admin/users" element={<Navigate to="/admin/employees" replace />} />
             <Route path="/admin/pending-products" element={<PendingProducts />} />
