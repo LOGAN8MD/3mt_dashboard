@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import AdminLayout from '../components/AdminLayout';
 import axios from '../utils/axiosInstance';
 
 const statusOptions = ['', 'new', 'contacted', 'converted', 'closed', 'spam'];
@@ -96,7 +95,7 @@ const ProductDemandReport = () => {
   };
 
   return (
-    <AdminLayout>
+    <>
       <div className="mx-auto max-w-7xl">
         <div className="mb-8 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -316,7 +315,7 @@ const ProductDemandReport = () => {
           )}
         </section>
       </div>
-    </AdminLayout>
+    </>
   );
 };
 

@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import AdminLayout from '../components/AdminLayout';
 import api from '../utils/axiosInstance';
 
 export const channelLabel = (delivery, channel, due) => {
@@ -56,7 +55,7 @@ const ManageReminders = () => {
     } finally { setBusy(''); }
   };
 
-  return <AdminLayout>
+  return <>
     <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
       <h1 className="text-2xl font-bold text-white">Reminders</h1>
       <div className="flex flex-wrap gap-3">
@@ -128,7 +127,7 @@ const ManageReminders = () => {
         </div>}
       </section>
     </div>}
-  </AdminLayout>;
+  </>;
 };
 
 export default ManageReminders;

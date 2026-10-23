@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
-import AdminLayout from '../components/AdminLayout';
 import axios from '../utils/axiosInstance';
 
 const initialFormData = {
@@ -202,7 +201,7 @@ const UserAddProductRequest = () => {
   };
 
   return (
-    <AdminLayout>
+    <>
       <div className="mx-auto max-w-3xl">
         <div className="mb-8">
           <p className="text-xs font-bold uppercase tracking-widest text-blue-400">Approval Request</p>
@@ -597,7 +596,7 @@ const UserAddProductRequest = () => {
           </form>
         </div>
       </div>
-    </AdminLayout>
+    </>
   );
 };
 

@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import AdminLayout from '../components/AdminLayout';
 import api from '../utils/axiosInstance';
 import { formatRentalMoney, paiseToInput, PAYMENT_METHODS, toLocalDateTimeInput } from '../utils/rentalForm';
 import { buildMachineSalePayload, buildSalePaymentPayload, SALE_STATUSES } from '../utils/machineSaleForm';
@@ -227,7 +226,7 @@ const ManageSales = () => {
   const selectedCustomer = customers.find((customer) => customer._id === form.customerId);
   const canPay = selected && ['draft', 'completed'].includes(selected.status) && selected.remainingBalancePaise > 0;
 
-  return <AdminLayout>
+  return <>
     <div className="mb-6"><h1 className="text-2xl font-bold text-white">Machine Sales</h1><p className="mt-1 text-sm text-gray-400">Sell individual second-hand machines and track customer balances.</p></div>
     <div className="mb-7 inline-flex rounded border border-gray-700 bg-gray-900 p-1" role="tablist" aria-label="Sales workspace">
       <button role="tab" aria-selected={workspace === 'manage'} onClick={() => setWorkspace('manage')} className={`rounded px-4 py-2 text-sm font-semibold ${workspace === 'manage' ? 'bg-blue-600 text-white' : 'text-gray-300'}`}>Manage sales</button>
@@ -258,7 +257,7 @@ const ManageSales = () => {
         {action === 'cancel' && <div className="mt-5 border-l-4 border-red-500 bg-gray-900/70 p-4"><label><span className={labelClass}>Required cancellation reason</span><textarea rows="3" value={cancelReason} onChange={(event) => setCancelReason(event.target.value)} className={fieldClass} /></label>{selected.paymentsReceivedPaise > 0 && <label className="mt-4 flex items-start gap-3 text-sm"><input type="checkbox" checked={refundConfirmed} onChange={(event) => setRefundConfirmed(event.target.checked)} className="mt-1" /><span>I confirm {formatRentalMoney(selected.paymentsReceivedPaise)} received for this draft has been refunded to the customer.</span></label>}<button disabled={Boolean(busy)} onClick={cancelDraft} className="mt-4 rounded bg-red-700 px-4 py-2 font-semibold disabled:opacity-50">{busy === 'cancel' ? 'Cancelling...' : 'Confirm cancellation'}</button></div>}
       </section>}
     </div>}</div></div>}
-  </AdminLayout>;
+  </>;
 };
 
 export default ManageSales;

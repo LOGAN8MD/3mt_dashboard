@@ -157,7 +157,6 @@ import React, { useEffect, useState } from 'react';
 import axios from '../utils/axiosInstance';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
-import AdminLayout from '../components/AdminLayout';
 
 const initialFormData = {
   name: '',
@@ -362,7 +361,7 @@ const AddProduct = () => {
   };
 
   return (
-    <AdminLayout>
+    <>
           <div className="max-w-3xl mx-auto">
             <div className="mb-8">
               <h1 className="text-3xl font-bold text-white tracking-tight">Add New Product</h1>
@@ -796,7 +795,7 @@ const AddProduct = () => {
               </form>
             </div>
           </div>
-    </AdminLayout>
+    </>
   );
 };
 

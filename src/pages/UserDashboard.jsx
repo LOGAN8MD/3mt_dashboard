@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import AdminLayout from '../components/AdminLayout';
 import axios from '../utils/axiosInstance';
 import {
   formatProductCurrency,
@@ -198,7 +197,7 @@ const UserDashboard = () => {
   }, [filters, products, normalizedSearchTerm]);
 
   return (
-    <AdminLayout>
+    <>
       <div className="mx-auto max-w-7xl">
         <div className="mb-8">
           <p className="text-xs font-bold uppercase tracking-widest text-blue-400">Product Catalog</p>
@@ -537,7 +536,7 @@ const UserDashboard = () => {
           </div>
         </div>
       )}
-    </AdminLayout>
+    </>
   );
 };
 

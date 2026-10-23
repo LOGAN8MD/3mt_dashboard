@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { showLoader, hideLoader } from '../utils/loaderState';
 import { getDashboardHomePath, isAdminRole } from '../utils/roles';
@@ -91,7 +91,7 @@ const AdminLayout = ({ children }) => {
           </span>
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-4 py-8 space-y-4">
+        <nav aria-label="Dashboard navigation" className="flex-1 overflow-y-auto px-4 py-8 space-y-4">
           <div className="text-xs uppercase text-gray-500 font-bold tracking-widest pl-3 mb-2">Menu</div>
           {navItems.map((item) => (
             <NavLink
@@ -140,7 +140,7 @@ const AdminLayout = ({ children }) => {
         </header>
 
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-[#1b2128] p-6 lg:p-10 relative">
-          {children}
+          {children || <Outlet />}
         </main>
       </div>
     </div>

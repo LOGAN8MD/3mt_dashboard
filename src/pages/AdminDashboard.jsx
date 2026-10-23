@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import axios from '../utils/axiosInstance';
 import { toast } from 'react-hot-toast';
-import AdminLayout from '../components/AdminLayout';
 import { CUSTOMER_ROLE, EMPLOYEE_ROLE } from '../utils/roles';
 import {
   formatProductCurrency,
@@ -283,7 +282,7 @@ const AdminDashboard = () => {
   }, [filters, products, normalizedSearchTerm]);
 
   return (
-    <AdminLayout>
+    <>
           <div className="max-w-7xl mx-auto">
             <div className="flex justify-between items-center mb-8">
               <h1 className="text-3xl font-bold text-white tracking-tight">Overview</h1>
@@ -736,7 +735,7 @@ const AdminDashboard = () => {
             </div>
           )}
           
-    </AdminLayout>
+    </>
   );
 };
 

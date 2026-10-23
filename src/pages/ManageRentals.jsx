@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import AdminLayout from '../components/AdminLayout';
 import RentalManagementPanel from '../components/RentalManagementPanel';
 import api from '../utils/axiosInstance';
 import {
@@ -194,7 +193,7 @@ const ManageRentals = () => {
   const selectedMachine = machines.find((machine) => machine._id === form.machineId);
   const selectedCustomer = customers.find((customer) => customer._id === form.customerId);
 
-  return <AdminLayout>
+  return <>
     <div className="mb-6">
       <h1 className="text-2xl font-bold text-white">Rentals</h1>
       <p className="mt-1 text-sm text-gray-400">Create rentals, monitor deadlines, and complete settlements.</p>
@@ -278,7 +277,7 @@ const ManageRentals = () => {
       </section>
     </>}
     </>}
-  </AdminLayout>;
+  </>;
 };
 
 export default ManageRentals;

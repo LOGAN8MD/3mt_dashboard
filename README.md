@@ -2,6 +2,8 @@
 
 React dashboard for 3MT administrators and employees. Admins manage products and employee submissions; employees can view the catalog and submit new products for approval.
 
+Admin and employee routes share one persistent `AdminLayout` through React Router nested routes. Sidebar/header state and sidebar scroll position remain mounted while only the main `<Outlet />` content changes during dashboard navigation.
+
 ## Requirements
 
 - Node.js 18 or newer

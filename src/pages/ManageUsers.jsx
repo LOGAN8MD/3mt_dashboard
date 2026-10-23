@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
-import AdminLayout from '../components/AdminLayout';
 import axios from '../utils/axiosInstance';
 import {
   ADMIN_ROLE,
@@ -195,7 +194,7 @@ const ManageUsers = () => {
   };
 
   return (
-    <AdminLayout>
+    <>
       <div className="mx-auto max-w-7xl">
         <div className="mb-8 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -507,7 +506,7 @@ const ManageUsers = () => {
           </div>
         </div>
       )}
-    </AdminLayout>
+    </>
   );
 };
 

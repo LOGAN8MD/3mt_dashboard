@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import axios from '../utils/axiosInstance';
 import { toast } from 'react-hot-toast';
-import AdminLayout from '../components/AdminLayout';
 
 const productTypes = ['machine', 'part', 'tool', 'accessory', 'spare'];
 const rentPeriods = ['day', 'week', 'month'];
@@ -415,7 +414,7 @@ const ManageProducts = () => {
   };
 
   return (
-    <AdminLayout>
+    <>
           <div className="max-w-7xl mx-auto">
             <div className="flex justify-between items-center mb-8">
               <h1 className="text-3xl font-bold text-white tracking-tight">Manage Inventory</h1>
@@ -1010,7 +1009,7 @@ const ManageProducts = () => {
           </div>
         </div>
       )}
-    </AdminLayout>
+    </>
   );
 };
 
