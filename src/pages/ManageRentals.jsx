@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import RentalManagementPanel from '../components/RentalManagementPanel';
+import RentalReminderEditor from '../components/RentalReminderEditor';
 import api from '../utils/axiosInstance';
 import {
   PAYMENT_METHODS,
@@ -10,6 +11,10 @@ import {
   paiseToInput,
   toLocalDateTimeInput,
 } from '../utils/rentalForm';
+import {
+  buildRentalReminderSettings,
+  reminderSettingsToForm,
+} from '../utils/rentalReminderForm';
 
 const dateInput = (offsetMs = 0) => toLocalDateTimeInput(new Date(Date.now() + offsetMs));
 const initialForm = () => ({
@@ -17,15 +22,19 @@ const initialForm = () => ({
   expectedReturnAt: dateInput(24 * 60 * 60 * 1000), billingPeriod: 'day',
   agreedRate: '', dailyLateRate: '', securityDeposit: '', initialPaymentAmount: '',
   paymentMethod: 'cash', paymentReference: '', paymentNote: '', notes: '',
+  reminderSettings: { mode: 'default', reminders: [] },
 });
 
 const fieldClass = 'w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-white focus:border-blue-500 focus:outline-none';
 const labelClass = 'mb-1 block text-xs font-semibold uppercase text-gray-400';
 const customerLabel = (customer) => [customer.name, customer.phone, customer.email].filter(Boolean).join(' | ');
 const machineLabel = (machine) => [machine.name, machine.brand, machine.model].filter(Boolean).join(' | ');
+const initialWorkspace = () => new URLSearchParams(window.location.search).get('workspace') === 'create'
+  ? 'create'
+  : 'manage';
 
 const ManageRentals = () => {
-  const [workspace, setWorkspace] = useState('manage');
+  const [workspace, setWorkspace] = useState(initialWorkspace);
   const [form, setForm] = useState(initialForm);
   const [customers, setCustomers] = useState([]);
   const [machines, setMachines] = useState([]);
@@ -35,6 +44,7 @@ const ManageRentals = () => {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
+  const [saveError, setSaveError] = useState('');
 
   const eligibleMachines = useMemo(() => machines.filter((machine) =>
     machine.condition === 'used' &&
@@ -66,6 +76,7 @@ const ManageRentals = () => {
     const { name, value } = event.target;
     setForm((current) => ({ ...current, [name]: value }));
     setQuote(null);
+    setSaveError('');
   };
 
   const selectMachine = (event) => {
@@ -80,15 +91,31 @@ const ManageRentals = () => {
       dailyLateRate: '',
     }));
     setQuote(null);
+    setSaveError('');
   };
 
-  const getPayload = (status) => {
-    try { return buildRentalPayload(form, status); }
-    catch (validationError) { toast.error(validationError.message); return null; }
+  const getPayload = (status, { includeReminders = true } = {}) => {
+    try {
+      const payload = buildRentalPayload(form, status);
+      if (includeReminders) {
+        const customer = customers.find((item) => item._id === form.customerId);
+        payload.reminderSettings = buildRentalReminderSettings(form.reminderSettings, {
+          customer,
+          handoverAt: form.handoverAt,
+          expectedReturnAt: form.expectedReturnAt,
+        });
+      }
+      setSaveError('');
+      return payload;
+    } catch (validationError) {
+      setSaveError(validationError.message);
+      toast.error(validationError.message);
+      return null;
+    }
   };
 
   const previewQuote = async () => {
-    const payload = getPayload();
+    const payload = getPayload(undefined, { includeReminders: false });
     if (!payload) return;
     setBusy('quote');
     try {
@@ -108,6 +135,7 @@ const ManageRentals = () => {
     setForm(initialForm());
     setEditingId('');
     setQuote(null);
+    setSaveError('');
   };
 
   const save = async (status) => {
@@ -133,7 +161,9 @@ const ManageRentals = () => {
       reset();
       await load();
     } catch (requestError) {
-      toast.error(requestError.response?.data?.message || 'Could not save rental');
+      const message = requestError.response?.data?.message || 'Could not save rental';
+      setSaveError(message);
+      toast.error(message);
     } finally { setBusy(''); }
   };
 
@@ -167,6 +197,7 @@ const ManageRentals = () => {
       paymentReference: payment?.reference || '',
       paymentNote: payment?.note || '',
       notes: draft.notes || '',
+      reminderSettings: reminderSettingsToForm(draft.reminderSettings),
     });
     setQuote({
       plannedRentalChargePaise: draft.plannedRentalChargePaise,
@@ -174,6 +205,7 @@ const ManageRentals = () => {
       plannedBillablePeriods: draft.plannedBillablePeriods,
       plannedExtraDays: draft.plannedExtraDays,
     });
+    setSaveError('');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -192,6 +224,16 @@ const ManageRentals = () => {
 
   const selectedMachine = machines.find((machine) => machine._id === form.machineId);
   const selectedCustomer = customers.find((customer) => customer._id === form.customerId);
+  let reminderValidationError = '';
+  try {
+    buildRentalReminderSettings(form.reminderSettings, {
+      customer: selectedCustomer,
+      handoverAt: form.handoverAt,
+      expectedReturnAt: form.expectedReturnAt,
+    });
+  } catch (validationError) {
+    reminderValidationError = validationError.message;
+  }
 
   return <>
     <div className="mb-6">
@@ -247,11 +289,23 @@ const ManageRentals = () => {
         </div>
         <div className="mt-5"><label className={labelClass}>Rental notes</label><textarea name="notes" rows="3" value={form.notes} onChange={update} className={fieldClass} /></div>
 
+        <RentalReminderEditor
+          settings={form.reminderSettings}
+          onChange={(reminderSettings) => {
+            setForm((current) => ({ ...current, reminderSettings }));
+            setSaveError('');
+          }}
+          customer={selectedCustomer}
+          expectedReturnAt={form.expectedReturnAt}
+          validationError={selectedCustomer ? reminderValidationError : ''}
+        />
+
         <div className="mt-6 flex flex-wrap gap-3">
           <button disabled={Boolean(busy)} onClick={previewQuote} className="rounded border border-blue-500 px-4 py-2 text-blue-300 disabled:opacity-50">{busy === 'quote' ? 'Calculating...' : 'Calculate quote'}</button>
           <button disabled={Boolean(busy)} onClick={() => save('draft')} className="rounded border border-gray-500 px-4 py-2 disabled:opacity-50">{busy === 'draft' ? 'Saving...' : 'Save draft'}</button>
           <button disabled={Boolean(busy)} onClick={() => save('active')} className="rounded bg-green-700 px-4 py-2 font-semibold text-white hover:bg-green-600 disabled:opacity-50">{busy === 'active' ? 'Activating...' : editingId ? 'Save and activate' : 'Confirm rental'}</button>
         </div>
+        {saveError && saveError !== reminderValidationError && <p role="alert" className="mt-4 border-l-4 border-red-500 bg-red-950/30 p-3 text-sm text-red-200">{saveError}</p>}
         {quote && <div className="mt-6 grid grid-cols-2 gap-4 border-y border-gray-700 py-4 md:grid-cols-4">
           <div><span className={labelClass}>Planned charge</span><strong className="text-green-300">{formatRentalMoney(quote.plannedRentalChargePaise)}</strong></div>
           <div><span className={labelClass}>Derived daily rate</span><strong>{formatRentalMoney(quote.derivedDailyRatePaise)}</strong></div>

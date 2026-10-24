@@ -24,6 +24,7 @@ beforeEach(() => {
 
 test('email is shown sent while WhatsApp stays ready until explicit admin confirmation', async () => {
   render(<ManageReminders />);
+  fireEvent.click(screen.getByRole('tab', { name: 'Delivery history' }));
   expect(await screen.findByText('Sent')).toBeInTheDocument();
   expect(screen.getByText('Message ready')).toBeInTheDocument();
   fireEvent.click(screen.getByText('Share on WhatsApp'));
@@ -39,6 +40,7 @@ test('email is shown sent while WhatsApp stays ready until explicit admin confir
 test('cancelled reminders have no share action even when their WhatsApp channel was pending', async () => {
   api.get.mockResolvedValue({ data: { occurrences: [{ ...occurrence, status: 'cancelled' }], pagination: { pages: 1 } } });
   render(<ManageReminders />);
+  fireEvent.click(screen.getByRole('tab', { name: 'Delivery history' }));
   await screen.findByText('Rahul');
   expect(screen.queryByText('Share on WhatsApp')).not.toBeInTheDocument();
 });

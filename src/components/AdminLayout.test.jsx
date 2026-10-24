@@ -29,3 +29,12 @@ test('keeps the same sidebar and its scroll position across nested route changes
   expect(screen.getByRole('navigation', { name: 'Dashboard navigation' })).toBe(navigation);
   expect(navigation.scrollTop).toBe(240);
 });
+
+test('shows the admin-only create reminder navigation entry', () => {
+  render(<AdminLayout><Page name="Admin page" /></AdminLayout>);
+
+  expect(screen.getByRole('link', { name: 'Create Reminder' })).toHaveAttribute(
+    'href',
+    '/admin/create-reminder'
+  );
+});

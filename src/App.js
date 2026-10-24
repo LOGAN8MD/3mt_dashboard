@@ -13,6 +13,7 @@ import ManageUsers from './pages/ManageUsers';
 import ManageCustomers from './pages/ManageCustomers';
 import ManageEnquiries from './pages/ManageEnquiries';
 import ManageReminders from './pages/ManageReminders';
+import CreateReminder from './pages/CreateReminder';
 import ManageRentals from './pages/ManageRentals';
 import ManageSales from './pages/ManageSales';
 import ProductDemandReport from './pages/ProductDemandReport';
@@ -46,6 +47,8 @@ const App = () => {
               <Route path="/admin/employees" element={<ManageUsers />} />
               <Route path="/admin/customers" element={<ManageCustomers />} />
               <Route path="/admin/enquiries" element={<ManageEnquiries />} />
+              <Route path="/admin/create-reminder" element={<Navigate to="/admin/create-reminder/rental" replace />} />
+              <Route path="/admin/create-reminder/:mode" element={<CreateReminder />} />
               <Route path="/admin/reminders" element={<ManageReminders />} />
               <Route path="/admin/rentals" element={<ManageRentals />} />
               <Route path="/admin/sales" element={<ManageSales />} />

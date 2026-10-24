@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import api from '../utils/axiosInstance';
+import ReminderPlanManagement from '../components/ReminderPlanManagement';
 
 export const channelLabel = (delivery, channel, due) => {
   const status = delivery?.status || 'not_selected';
@@ -16,7 +17,7 @@ const formatTime = (value) => value ? new Intl.DateTimeFormat('en-IN', {
   timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short',
 }).format(new Date(value)) : '-';
 
-const ManageReminders = () => {
+const ReminderDeliveryHistory = () => {
   const [items, setItems] = useState([]);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(0);
@@ -57,7 +58,7 @@ const ManageReminders = () => {
 
   return <>
     <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-      <h1 className="text-2xl font-bold text-white">Reminders</h1>
+      <h2 className="text-lg font-semibold text-white">Delivery history</h2>
       <div className="flex flex-wrap gap-3">
         <select aria-label="Reminder status" value={status} onChange={(e) => { setStatus(e.target.value); setPage(1); }} className="bg-gray-800 border border-gray-600 rounded px-3 py-2">
           <option value="">All statuses</option>
@@ -127,6 +128,22 @@ const ManageReminders = () => {
         </div>}
       </section>
     </div>}
+  </>;
+};
+
+const ManageReminders = () => {
+  const [workspace, setWorkspace] = useState('plans');
+
+  return <>
+    <div className="mb-6">
+      <h1 className="text-2xl font-bold text-white">Reminders</h1>
+      <p className="mt-1 text-sm text-gray-400">Manage complete reminder plans and review individual delivery results.</p>
+    </div>
+    <div className="mb-7 inline-flex w-full rounded border border-gray-700 bg-gray-900 p-1 sm:w-auto" role="tablist" aria-label="Reminder workspace">
+      <button role="tab" aria-selected={workspace === 'plans'} onClick={() => setWorkspace('plans')} className={`flex-1 rounded px-4 py-2 text-sm font-semibold sm:flex-none ${workspace === 'plans' ? 'bg-blue-600 text-white' : 'text-gray-300'}`}>Reminder plans</button>
+      <button role="tab" aria-selected={workspace === 'history'} onClick={() => setWorkspace('history')} className={`flex-1 rounded px-4 py-2 text-sm font-semibold sm:flex-none ${workspace === 'history' ? 'bg-blue-600 text-white' : 'text-gray-300'}`}>Delivery history</button>
+    </div>
+    {workspace === 'plans' ? <ReminderPlanManagement /> : <ReminderDeliveryHistory />}
   </>;
 };
 

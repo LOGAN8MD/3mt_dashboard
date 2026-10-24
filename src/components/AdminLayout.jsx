@@ -25,6 +25,7 @@ const adminNavItems = [
   { label: 'Rentals', to: '/admin/rentals' },
   { label: 'Sales', to: '/admin/sales' },
   { label: 'Enquiries', to: '/admin/enquiries' },
+  { label: 'Create Reminder', to: '/admin/create-reminder' },
   { label: 'Reminders', to: '/admin/reminders' },
   { label: 'Demand Report', to: '/admin/demand-report' },
   { label: 'Pending Products', to: '/admin/pending-products' },

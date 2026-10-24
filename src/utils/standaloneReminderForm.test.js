@@ -1,0 +1,55 @@
+import {
+  applySharedContent,
+  buildStandaloneReminderPayload,
+} from './standaloneReminderForm';
+
+const customer = { _id: 'customer-1', email: 'deepak@example.com', phone: '9876543210' };
+const baseForm = {
+  customerId: customer._id,
+  productId: 'product-1',
+  startAt: '2026-11-15T10:00',
+  endAt: '2026-11-16T10:00',
+  submissionKey: 'dashboard-request-1',
+  sharedSubjectEnglish: 'Service reminder',
+  sharedSubjectHindi: 'सेवा रिमाइंडर',
+  sharedBodyEnglish: 'Please visit the shop.',
+  sharedBodyHindi: 'कृपया दुकान पर आएं।',
+  reminders: [{
+    id: 'row-1', offsetValue: '2', offsetUnit: 'hours',
+    channels: { email: true, whatsapp: false },
+    subjectEnglish: '', subjectHindi: '', bodyEnglish: '', bodyHindi: '',
+  }],
+};
+
+test('applies shared bilingual content and builds a standalone plan payload', () => {
+  const form = applySharedContent(baseForm);
+  const payload = buildStandaloneReminderPayload(
+    form,
+    customer,
+    new Date('2026-11-14T10:00:00.000Z')
+  );
+
+  expect(payload).toEqual(expect.objectContaining({
+    customerId: customer._id,
+    productId: 'product-1',
+    startAt: baseForm.startAt,
+    endAt: baseForm.endAt,
+    submissionKey: 'dashboard-request-1',
+  }));
+  expect(payload.reminders[0]).toEqual(expect.objectContaining({
+    offsetMinutes: 120,
+    channels: ['email'],
+    content: expect.objectContaining({
+      bodyEnglish: 'Please visit the shop.',
+      bodyHindi: 'कृपया दुकान पर आएं।',
+    }),
+  }));
+});
+
+test('standalone payload keeps product context optional and validates contact channels', () => {
+  const form = applySharedContent({ ...baseForm, productId: '' });
+  expect(buildStandaloneReminderPayload(form, customer, new Date('2026-11-14T10:00:00.000Z')).productId)
+    .toBeUndefined();
+  expect(() => buildStandaloneReminderPayload(form, { ...customer, email: '' }, new Date('2026-11-14T10:00:00.000Z')))
+    .toThrow(/email address/);
+});

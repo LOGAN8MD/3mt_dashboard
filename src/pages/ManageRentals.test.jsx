@@ -12,6 +12,7 @@ const machine = { _id: 'machine-1', name: 'Bosch Drill', brand: 'BOSCH', model: 
 
 beforeEach(() => {
   jest.clearAllMocks();
+  window.history.replaceState({}, '', '/admin/rentals');
   api.get.mockImplementation((url) => {
     if (url === '/api/users') return Promise.resolve({ data: [customer] });
     if (url === '/api/products/inventory') return Promise.resolve({ data: [machine] });
@@ -20,6 +21,14 @@ beforeEach(() => {
   api.post.mockImplementation((url) => url === '/api/rentals/quote'
     ? Promise.resolve({ data: { plannedRentalChargePaise: 50000, derivedDailyRatePaise: 50000, plannedBillablePeriods: 1, plannedExtraDays: 0 } })
     : Promise.resolve({ data: {} }));
+});
+
+test('opens the existing creation workspace from the create reminder route', async () => {
+  window.history.replaceState({}, '', '/admin/rentals?workspace=create');
+  render(<ManageRentals />);
+
+  expect(screen.getByRole('tab', { name: 'Create & drafts' })).toHaveAttribute('aria-selected', 'true');
+  await screen.findByText(/Deepak Mishra/);
 });
 
 test('loads eligible rental setup data and calculates a server quote', async () => {
@@ -42,5 +51,27 @@ test('confirmation creates an active rental while draft action preserves draft s
   fireEvent.change(screen.getByLabelText('Available second-hand machine'), { target: { value: machine._id } });
   fireEvent.click(screen.getByText('Confirm rental'));
   await waitFor(() => expect(api.post).toHaveBeenCalledWith('/api/rentals', expect.objectContaining({ status: 'active', machineId: machine._id, customerId: customer._id })));
+  confirm.mockRestore();
+});
+
+test('submits custom bilingual reminder rows with the rental', async () => {
+  const confirm = jest.spyOn(window, 'confirm').mockReturnValue(true);
+  render(<ManageRentals />);
+  fireEvent.click(screen.getByText('Create & drafts'));
+  await screen.findByText(/Deepak Mishra/);
+  fireEvent.change(screen.getByLabelText('Customer'), { target: { value: customer._id } });
+  fireEvent.change(screen.getByLabelText('Available second-hand machine'), { target: { value: machine._id } });
+  fireEvent.click(screen.getByRole('tab', { name: 'Custom reminders' }));
+  fireEvent.change(screen.getByLabelText('Reminder 1 English message'), { target: { value: 'Please return the drill.' } });
+  fireEvent.change(screen.getByLabelText('Reminder 1 Hindi message'), { target: { value: 'कृपया ड्रिल वापस करें।' } });
+  fireEvent.click(screen.getByText('Confirm rental'));
+
+  await waitFor(() => expect(api.post).toHaveBeenCalledWith('/api/rentals', expect.objectContaining({
+    status: 'active',
+    reminderSettings: {
+      mode: 'custom',
+      reminders: [expect.objectContaining({ offsetMinutes: 60, channels: ['email', 'whatsapp'] })],
+    },
+  })));
   confirm.mockRestore();
 });
