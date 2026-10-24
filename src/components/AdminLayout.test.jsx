@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import AdminLayout from './AdminLayout';
 
 jest.mock('react-hot-toast', () => ({ toast: { success: jest.fn() } }));
@@ -37,4 +37,35 @@ test('shows the admin-only create reminder navigation entry', () => {
     'href',
     '/admin/create-reminder'
   );
+});
+
+test('organizes admin navigation into business-focused groups and keeps useful ordering', () => {
+  render(<AdminLayout><Page name="Admin page" /></AdminLayout>);
+
+  ['Overview', 'Catalog', 'People', 'Business', 'Communication', 'Insights'].forEach((heading) => {
+    expect(screen.getByRole('heading', { name: heading })).toBeInTheDocument();
+  });
+  const links = screen.getAllByRole('link').map((link) => link.textContent.trim());
+  expect(links.indexOf('Manage Products')).toBeLessThan(links.indexOf('Pending Products'));
+  expect(links.indexOf('Rentals')).toBeLessThan(links.indexOf('Create Reminder'));
+});
+
+test('shows only employee groups for an employee account', () => {
+  localStorage.setItem('userInfo', JSON.stringify({ name: 'Deepak Employee', role: 'employee' }));
+  render(<AdminLayout><Page name="Employee page" /></AdminLayout>);
+
+  expect(screen.getByRole('heading', { name: 'Product Requests' })).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Add Product Request' })).toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: 'Manage Products' })).not.toBeInTheDocument();
+  expect(screen.getByText('Employee Workspace')).toBeInTheDocument();
+});
+
+test('mobile menu exposes clear open and close controls', () => {
+  render(<AdminLayout><Page name="Admin page" /></AdminLayout>);
+
+  const openButton = screen.getByRole('button', { name: 'Open admin menu' });
+  expect(openButton).toHaveAttribute('aria-expanded', 'false');
+  fireEvent.click(openButton);
+  expect(openButton).toHaveAttribute('aria-expanded', 'true');
+  expect(screen.getAllByRole('button', { name: 'Close dashboard menu' })).toHaveLength(2);
 });
