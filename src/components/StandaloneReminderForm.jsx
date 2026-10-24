@@ -8,6 +8,12 @@ import {
   createStandaloneReminderForm,
 } from '../utils/standaloneReminderForm';
 import { formatReminderTimeIST } from '../utils/rentalReminderForm';
+import {
+  CUSTOM_MESSAGE_TEMPLATE,
+  renderStandaloneReminderTemplate,
+  standaloneReminderTemplates,
+  toSharedMessageFields,
+} from '../utils/standaloneReminderTemplates';
 import ReminderRowsEditor from './ReminderRowsEditor';
 
 const dateInput = (offsetMs = 0) => toLocalDateTimeInput(new Date(Date.now() + offsetMs));
@@ -25,6 +31,8 @@ const StandaloneReminderForm = () => {
   const [error, setError] = useState('');
   const [preview, setPreview] = useState(null);
   const [createdPlan, setCreatedPlan] = useState(null);
+  const [messageTemplate, setMessageTemplate] = useState(CUSTOM_MESSAGE_TEMPLATE);
+  const [templateDetails, setTemplateDetails] = useState({ machineName: '', amount: '' });
 
   const loadOptions = useCallback(async () => {
     setLoading(true);
@@ -62,6 +70,20 @@ const StandaloneReminderForm = () => {
     setPreview(null);
     setCreatedPlan(null);
     setError('');
+  };
+
+  const applyTemplate = (templateId, details = templateDetails) => {
+    setMessageTemplate(templateId);
+    change(toSharedMessageFields(renderStandaloneReminderTemplate(templateId, {
+      ...details,
+      machineName: details.machineName || selectedProduct?.name,
+    })));
+  };
+
+  const changeTemplateDetails = (patch) => {
+    const nextDetails = { ...templateDetails, ...patch };
+    setTemplateDetails(nextDetails);
+    applyTemplate(messageTemplate, nextDetails);
   };
 
   const payload = () => {
@@ -142,6 +164,24 @@ const StandaloneReminderForm = () => {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div><h3 id="shared-message-heading" className="font-medium text-white">Shared starting message</h3><p className="mt-1 text-sm text-gray-400">Apply this content to every row, then customize individual reminders below.</p></div>
           <button type="button" onClick={() => change(applySharedContent(form))} className="rounded border border-blue-500 px-4 py-2 text-sm font-semibold text-blue-300">Apply to all reminders</button>
+        </div>
+        <div className="mb-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div>
+            <label htmlFor="standalone-message-template" className={labelClass}>Message template</label>
+            <select id="standalone-message-template" value={messageTemplate} onChange={(event) => applyTemplate(event.target.value)} className={fieldClass}>
+              {standaloneReminderTemplates.map((template) => <option key={template.id} value={template.id}>{template.label}</option>)}
+            </select>
+          </div>
+          {messageTemplate === 'machine-ready-with-amount' && <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label htmlFor="template-machine-name" className={labelClass}>Machine name</label>
+              <input id="template-machine-name" value={templateDetails.machineName} onChange={(event) => changeTemplateDetails({ machineName: event.target.value })} placeholder={selectedProduct?.name || 'Machine name'} className={fieldClass} />
+            </div>
+            <div>
+              <label htmlFor="template-amount" className={labelClass}>Amount (₹)</label>
+              <input id="template-amount" type="number" min="0" step="0.01" value={templateDetails.amount} onChange={(event) => changeTemplateDetails({ amount: event.target.value })} placeholder="0.00" className={fieldClass} />
+            </div>
+          </div>}
         </div>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div><label className={labelClass}>English subject (optional)</label><input value={form.sharedSubjectEnglish} maxLength="200" onChange={(event) => change({ sharedSubjectEnglish: event.target.value })} className={fieldClass} /></div>
