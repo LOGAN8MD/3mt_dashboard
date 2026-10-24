@@ -28,13 +28,13 @@ const adminNavGroups = [
     { label: 'Employees', to: '/admin/employees' },
   ] },
   { label: 'Business', items: [
-    { label: 'Rentals', to: '/admin/rentals' },
     { label: 'Sales', to: '/admin/sales' },
     { label: 'Enquiries', to: '/admin/enquiries' },
   ] },
   { label: 'Communication', items: [
-    { label: 'Create Reminder', to: '/admin/create-reminder' },
-    { label: 'Reminders', to: '/admin/reminders' },
+    { label: 'Create Reminders', to: '/admin/create-reminder' },
+    { label: 'Manage Reminders', to: '/admin/manage-reminders' },
+    { label: 'Reminder Logs', to: '/admin/reminder-logs' },
   ] },
   { label: 'Insights', items: [{ label: 'Demand Report', to: '/admin/demand-report' }] },
 ];

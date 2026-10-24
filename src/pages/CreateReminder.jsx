@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, Navigate, NavLink, useParams } from 'react-router-dom';
+import RentalWorkspace from '../components/RentalWorkspace';
 import StandaloneReminderForm from '../components/StandaloneReminderForm';
 
 const modes = [
@@ -11,13 +12,6 @@ const modeLinkClass = ({ isActive }) =>
   `min-w-0 flex-1 rounded px-3 py-2 text-center text-sm font-semibold transition-colors sm:flex-none sm:px-5 ${
     isActive ? 'bg-blue-600 text-white' : 'text-gray-300 hover:bg-gray-800 hover:text-white'
   }`;
-
-const ContextItem = ({ label, value }) => (
-  <div className="min-w-0 border-b border-gray-800 py-4 last:border-b-0 sm:grid sm:grid-cols-[10rem_1fr] sm:gap-5">
-    <dt className="text-xs font-bold uppercase text-gray-500">{label}</dt>
-    <dd className="mt-1 text-sm text-gray-200 sm:mt-0">{value}</dd>
-  </div>
-);
 
 const CreateReminder = () => {
   const { mode } = useParams();
@@ -52,7 +46,7 @@ const CreateReminder = () => {
         ))}
       </nav>
 
-      <section className="border-y border-gray-700 py-6" aria-labelledby={`${mode}-mode-title`}>
+      <section className="border-t border-gray-700 py-6" aria-labelledby={`${mode}-mode-title`}>
         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           <div className="max-w-2xl">
             <p className="text-xs font-bold uppercase text-blue-400">Selected mode</p>
@@ -66,16 +60,9 @@ const CreateReminder = () => {
             </p>
           </div>
 
-          {rentalMode ? (
+          {!rentalMode && (
             <Link
-              to="/admin/rentals?workspace=create"
-              className="inline-flex min-h-10 shrink-0 items-center justify-center rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-400"
-            >
-              Open rental setup
-            </Link>
-          ) : (
-            <Link
-              to="/admin/reminders"
+              to="/admin/reminder-logs/custom"
               className="inline-flex min-h-10 shrink-0 items-center justify-center rounded border border-gray-600 px-4 py-2 text-sm font-semibold text-gray-200 transition-colors hover:border-gray-500 hover:bg-gray-800"
             >
               View reminder history
@@ -83,13 +70,11 @@ const CreateReminder = () => {
           )}
         </div>
 
-        {rentalMode ? <dl className="mt-6 border-t border-gray-800">
-            <>
-              <ContextItem label="Customer context" value="Selected inside the rental setup with current email and WhatsApp details." />
-              <ContextItem label="Machine context" value="Limited to eligible available second-hand rental machines." />
-              <ContextItem label="Reminder plan" value="Default or customized return reminders are configured with the rental." />
-            </>
-        </dl> : <StandaloneReminderForm />}
+        <div className="mt-6 border-t border-gray-800 pt-1">
+          {rentalMode
+            ? <RentalWorkspace fixedWorkspace="create" showHeader={false} />
+            : <StandaloneReminderForm />}
+        </div>
       </section>
     </div>
   );

@@ -85,3 +85,13 @@ test('supports long plan content and closes the detail dialog with Escape', asyn
   fireEvent.keyDown(document, { key: 'Escape' });
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 });
+
+test('fixed plan type hides the type filter and scopes the plan request', async () => {
+  render(<ReminderPlanManagement fixedPlanType="rental" />);
+
+  await screen.findByText('RPL-TEST-1');
+  expect(screen.queryByLabelText('Plan type')).not.toBeInTheDocument();
+  expect(api.get).toHaveBeenCalledWith('/api/reminders/plans', {
+    params: expect.objectContaining({ planType: 'rental' }),
+  });
+});

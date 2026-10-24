@@ -31,6 +31,14 @@ test('opens the existing creation workspace from the create reminder route', asy
   await screen.findByText(/Deepak Mishra/);
 });
 
+test('does not load rental creation data while only management is visible', async () => {
+  render(<ManageRentals />);
+
+  await waitFor(() => expect(api.get).toHaveBeenCalledWith('/api/rentals', expect.any(Object)));
+  expect(api.get).not.toHaveBeenCalledWith('/api/users', expect.any(Object));
+  expect(api.get).not.toHaveBeenCalledWith('/api/products/inventory');
+});
+
 test('loads eligible rental setup data and calculates a server quote', async () => {
   render(<ManageRentals />);
   fireEvent.click(screen.getByText('Create & drafts'));

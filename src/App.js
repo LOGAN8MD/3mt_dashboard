@@ -14,7 +14,7 @@ import ManageCustomers from './pages/ManageCustomers';
 import ManageEnquiries from './pages/ManageEnquiries';
 import ManageReminders from './pages/ManageReminders';
 import CreateReminder from './pages/CreateReminder';
-import ManageRentals from './pages/ManageRentals';
+import ReminderLogs from './pages/ReminderLogs';
 import ManageSales from './pages/ManageSales';
 import ProductDemandReport from './pages/ProductDemandReport';
 import PendingProducts from './pages/PendingProducts';
@@ -25,6 +25,7 @@ import AddProduct from './pages/AddProduct';
 import GlobalSpinner from './components/GlobalSpinner';
 import AdminLayout from './components/AdminLayout';
 import ProtectedRoute from './components/ProtectedRoute';
+import { LegacyRemindersRedirect, LegacyRentalsRedirect } from './components/LegacyReminderRedirects';
 import { ADMIN_ROLE, DASHBOARD_ROLES } from './utils/roles';
 
 const App = () => {
@@ -49,8 +50,12 @@ const App = () => {
               <Route path="/admin/enquiries" element={<ManageEnquiries />} />
               <Route path="/admin/create-reminder" element={<Navigate to="/admin/create-reminder/rental" replace />} />
               <Route path="/admin/create-reminder/:mode" element={<CreateReminder />} />
-              <Route path="/admin/reminders" element={<ManageReminders />} />
-              <Route path="/admin/rentals" element={<ManageRentals />} />
+              <Route path="/admin/manage-reminders" element={<Navigate to="/admin/manage-reminders/rental" replace />} />
+              <Route path="/admin/manage-reminders/:mode" element={<ManageReminders />} />
+              <Route path="/admin/reminder-logs" element={<Navigate to="/admin/reminder-logs/rental" replace />} />
+              <Route path="/admin/reminder-logs/:mode" element={<ReminderLogs />} />
+              <Route path="/admin/reminders" element={<LegacyRemindersRedirect />} />
+              <Route path="/admin/rentals" element={<LegacyRentalsRedirect />} />
               <Route path="/admin/sales" element={<ManageSales />} />
               <Route path="/admin/demand-report" element={<ProductDemandReport />} />
               <Route path="/admin/users" element={<Navigate to="/admin/employees" replace />} />

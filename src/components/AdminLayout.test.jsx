@@ -30,13 +30,14 @@ test('keeps the same sidebar and its scroll position across nested route changes
   expect(navigation.scrollTop).toBe(240);
 });
 
-test('shows the admin-only create reminder navigation entry', () => {
+test('shows the three admin-only reminder workspace entries', () => {
   render(<AdminLayout><Page name="Admin page" /></AdminLayout>);
 
-  expect(screen.getByRole('link', { name: 'Create Reminder' })).toHaveAttribute(
-    'href',
-    '/admin/create-reminder'
-  );
+  expect(screen.getByRole('link', { name: 'Create Reminders' })).toHaveAttribute('href', '/admin/create-reminder');
+  expect(screen.getByRole('link', { name: 'Manage Reminders' })).toHaveAttribute('href', '/admin/manage-reminders');
+  expect(screen.getByRole('link', { name: 'Reminder Logs' })).toHaveAttribute('href', '/admin/reminder-logs');
+  expect(screen.queryByRole('link', { name: 'Rentals' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: 'Reminders' })).not.toBeInTheDocument();
 });
 
 test('organizes admin navigation into business-focused groups and keeps useful ordering', () => {
@@ -47,7 +48,8 @@ test('organizes admin navigation into business-focused groups and keeps useful o
   });
   const links = screen.getAllByRole('link').map((link) => link.textContent.trim());
   expect(links.indexOf('Manage Products')).toBeLessThan(links.indexOf('Pending Products'));
-  expect(links.indexOf('Rentals')).toBeLessThan(links.indexOf('Create Reminder'));
+  expect(links.indexOf('Create Reminders')).toBeLessThan(links.indexOf('Manage Reminders'));
+  expect(links.indexOf('Manage Reminders')).toBeLessThan(links.indexOf('Reminder Logs'));
 });
 
 test('shows only employee groups for an employee account', () => {
@@ -57,6 +59,7 @@ test('shows only employee groups for an employee account', () => {
   expect(screen.getByRole('heading', { name: 'Product Requests' })).toBeInTheDocument();
   expect(screen.getByRole('link', { name: 'Add Product Request' })).toBeInTheDocument();
   expect(screen.queryByRole('link', { name: 'Manage Products' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: 'Create Reminders' })).not.toBeInTheDocument();
   expect(screen.getByText('Employee Workspace')).toBeInTheDocument();
 });
 

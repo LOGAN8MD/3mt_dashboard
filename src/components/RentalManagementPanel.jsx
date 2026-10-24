@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import api from '../utils/axiosInstance';
+import ReminderPlanManagement from './ReminderPlanManagement';
 import { formatRentalMoney, PAYMENT_METHODS, toLocalDateTimeInput } from '../utils/rentalForm';
 import {
   buildPaymentPayload,
@@ -240,6 +241,11 @@ const RentalManagementPanel = () => {
 
           <section><h3 className="mb-3 font-semibold text-white">Payments</h3>{selected.payments?.length ? <div className="divide-y divide-gray-700">{selected.payments.map((item, index) => <div key={item._id || index} className="grid grid-cols-1 gap-2 py-3 sm:grid-cols-4"><strong>{formatRentalMoney(item.amountPaise)}</strong><span className="text-sm capitalize">{humanize(item.method)}</span><span className="text-sm text-gray-400">{formatIndiaDateTime(item.paidAt)}</span><span className="text-sm text-gray-400">{item.reference || item.note || 'No reference'}</span></div>)}</div> : <p className="text-sm text-gray-400">No rental payments recorded.</p>}</section>
           <section><h3 className="mb-3 font-semibold text-white">Reminder history</h3>{reminders.length ? <div className="divide-y divide-gray-700">{reminders.map((item) => <div key={item._id} className="grid grid-cols-1 gap-2 py-3 sm:grid-cols-[1fr_auto_auto]"><div><p className="text-sm font-medium capitalize">{humanize(item.definitionType)}</p><p className="text-xs text-gray-400">{formatIndiaDateTime(item.scheduledAt)}</p></div><span className="text-xs capitalize text-gray-300">Email: {humanize(item.emailDelivery?.status)}</span><span className="text-xs capitalize text-gray-300">WhatsApp: {humanize(item.whatsappDelivery?.status)}</span></div>)}</div> : <p className="text-sm text-gray-400">No reminder occurrences found.</p>}</section>
+          <section className="border-y border-gray-700 py-6">
+            <h3 className="font-semibold text-white">Reminder plan controls</h3>
+            <p className="mb-5 mt-1 text-sm text-gray-400">Edit, pause, resume, or cancel this rental's reminder plan. These actions do not cancel the rental or change machine availability, dates, payments, or billing.</p>
+            <ReminderPlanManagement fixedPlanType="rental" rentalId={selected._id} embedded />
+          </section>
           <section><h3 className="mb-3 font-semibold text-white">Audit history</h3>{sortedAudit.length ? <div className="divide-y divide-gray-700">{sortedAudit.map((item) => <div key={item._id} className="py-3"><div className="flex flex-wrap justify-between gap-2"><strong className="text-sm capitalize">{humanize(item.action)}</strong><span className="text-xs text-gray-500">{formatIndiaDateTime(item.performedAt)}</span></div><p className="mt-1 text-sm text-gray-400">{item.note || 'No note'}</p></div>)}</div> : <p className="text-sm text-gray-400">No audit entries found.</p>}</section>
 
           {(canService || canPay || ['draft', 'active', 'overdue'].includes(selected.status)) && <section className="border-t border-gray-700 pt-6"><h3 className="mb-4 font-semibold text-white">Actions</h3><div className="flex flex-wrap gap-2">{canService && <><button onClick={() => beginAction('extend')} className={`${buttonClass} border-blue-500/60 text-blue-300`}>Extend rental</button><button onClick={() => beginAction('return')} className={`${buttonClass} border-green-500/60 text-green-300`}>Record return</button></>}{canPay && <button onClick={() => beginAction('payment')} className={`${buttonClass} border-yellow-500/60 text-yellow-300`}>Add payment</button>}{['draft', 'active', 'overdue'].includes(selected.status) && <button onClick={() => beginAction('cancel')} className={`${buttonClass} border-red-500/60 text-red-300`}>Cancel rental</button>}</div>

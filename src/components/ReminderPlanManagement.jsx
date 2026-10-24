@@ -17,12 +17,12 @@ const formatTime = (value) => value ? new Intl.DateTimeFormat('en-IN', {
 }).format(new Date(value)) : '-';
 const deliveryLabel = (delivery) => (delivery?.status || 'not_selected').replaceAll('_', ' ');
 
-const ReminderPlanManagement = () => {
+const ReminderPlanManagement = ({ fixedPlanType = '', rentalId = '', embedded = false }) => {
   const [plans, setPlans] = useState([]);
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(0);
   const [search, setSearch] = useState('');
-  const [planType, setPlanType] = useState('');
+  const [planType, setPlanType] = useState(fixedPlanType);
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -35,8 +35,10 @@ const ReminderPlanManagement = () => {
     setLoading(true);
     setError('');
     try {
+      const params = { page, limit: 15, search, planType: fixedPlanType || planType, status };
+      if (rentalId) params.rental = rentalId;
       const { data } = await api.get('/api/reminders/plans', {
-        params: { page, limit: 15, search, planType, status },
+        params,
       });
       setPlans(data.plans || []);
       setPages(data.pagination?.pages || 0);
@@ -45,7 +47,7 @@ const ReminderPlanManagement = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, planType, search, status]);
+  }, [fixedPlanType, page, planType, rentalId, search, status]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -145,9 +147,9 @@ const ReminderPlanManagement = () => {
   };
 
   return <>
-    <div className="mb-5 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(16rem,1fr)_12rem_12rem_auto]">
-      <input aria-label="Search reminder plans" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Search plan, customer, product, email, or phone" className={fieldClass} />
-      <select aria-label="Plan type" value={planType} onChange={(event) => { setPlanType(event.target.value); setPage(1); }} className={fieldClass}><option value="">All plan types</option><option value="rental">Rental</option><option value="standalone">Custom</option></select>
+    <div className={`mb-5 grid grid-cols-1 gap-3 ${embedded ? 'sm:grid-cols-[12rem_auto]' : fixedPlanType ? 'lg:grid-cols-[minmax(16rem,1fr)_12rem_auto]' : 'lg:grid-cols-[minmax(16rem,1fr)_12rem_12rem_auto]'}`}>
+      {!embedded && <input aria-label="Search reminder plans" value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Search plan, customer, product, email, or phone" className={fieldClass} />}
+      {!fixedPlanType && <select aria-label="Plan type" value={planType} onChange={(event) => { setPlanType(event.target.value); setPage(1); }} className={fieldClass}><option value="">All plan types</option><option value="rental">Rental</option><option value="standalone">Custom</option></select>}
       <select aria-label="Plan status" value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }} className={fieldClass}><option value="">All statuses</option>{['active', 'paused', 'completed', 'cancelled'].map((value) => <option key={value} value={value}>{value}</option>)}</select>
       <button disabled={loading} onClick={load} className="rounded border border-gray-600 px-4 py-2 disabled:opacity-50">Refresh</button>
     </div>

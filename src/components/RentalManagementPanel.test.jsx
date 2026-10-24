@@ -31,6 +31,7 @@ beforeEach(() => {
     if (url === '/api/rentals') return Promise.resolve({ data: { rentals: [rental], pagination: { page: 1, pages: 1, total: 1 } } });
     if (url === `/api/rentals/${rental._id}`) return Promise.resolve({ data: rental });
     if (url === '/api/reminders/occurrences') return Promise.resolve({ data: { occurrences: [] } });
+    if (url === '/api/reminders/plans') return Promise.resolve({ data: { plans: [], pagination: { pages: 0 } } });
     return Promise.reject(new Error('Unexpected GET'));
   });
   api.post.mockImplementation((url) => {
@@ -53,6 +54,14 @@ test('opens complete rental detail and records an extension', async () => {
   fireEvent.change(screen.getByLabelText('Required extension note'), { target: { value: 'Customer requested two more days' } });
   fireEvent.click(screen.getByText('Confirm extension'));
   await waitFor(() => expect(api.post).toHaveBeenCalledWith(`/api/rentals/${rental._id}/extend`, expect.objectContaining({ note: 'Customer requested two more days' })));
+});
+
+test('loads rental-specific reminder plan controls without changing the rental contract', async () => {
+  await openRental();
+  expect(screen.getByText(/These actions do not cancel the rental/)).toBeInTheDocument();
+  await waitFor(() => expect(api.get).toHaveBeenCalledWith('/api/reminders/plans', expect.objectContaining({
+    params: expect.objectContaining({ planType: 'rental', rental: rental._id }),
+  })));
 });
 
 test('previews the authoritative settlement before confirming a return', async () => {
