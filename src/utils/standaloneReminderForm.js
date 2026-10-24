@@ -31,6 +31,9 @@ export const applySharedContent = (form) => ({
     subjectHindi: form.sharedSubjectHindi,
     bodyEnglish: form.sharedBodyEnglish,
     bodyHindi: form.sharedBodyHindi,
+    templateId: 'custom',
+    templateMachineName: '',
+    templateAmount: '',
   })),
 });
 

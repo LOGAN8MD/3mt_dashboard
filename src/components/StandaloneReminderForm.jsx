@@ -194,7 +194,7 @@ const StandaloneReminderForm = () => {
       <section className="mt-7 border-t border-gray-700 pt-6" aria-labelledby="custom-reminder-rows-heading">
         <h3 id="custom-reminder-rows-heading" className="font-medium text-white">Reminder schedule</h3>
         <p className="mb-5 mt-1 text-sm text-gray-400">Each reminder is scheduled before the selected end time and displayed in IST.</p>
-        <ReminderRowsEditor reminders={form.reminders} onChange={(reminders) => change({ reminders })} endAt={form.endAt} />
+        <ReminderRowsEditor reminders={form.reminders} onChange={(reminders) => change({ reminders })} endAt={form.endAt} productName={selectedProduct?.name} />
         {validationError && <p role="alert" className="mt-4 border-l-4 border-red-500 bg-red-950/30 p-3 text-sm text-red-200">{validationError}</p>}
       </section>
 

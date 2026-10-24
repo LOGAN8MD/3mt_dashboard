@@ -17,6 +17,9 @@ export const createReminderRow = (id = `${Date.now()}-${Math.random()}`) => ({
   subjectHindi: '',
   bodyEnglish: '',
   bodyHindi: '',
+  templateId: 'custom',
+  templateMachineName: '',
+  templateAmount: '',
 });
 
 const offsetInput = (minutes) => {

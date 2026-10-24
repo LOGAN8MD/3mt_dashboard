@@ -7,11 +7,16 @@ import {
   formatReminderTimeIST,
   reminderOffsetMinutes,
 } from '../utils/rentalReminderForm';
+import {
+  CUSTOM_MESSAGE_TEMPLATE,
+  renderStandaloneReminderTemplate,
+  standaloneReminderTemplates,
+} from '../utils/standaloneReminderTemplates';
 
 const fieldClass = 'w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-white focus:border-blue-500 focus:outline-none';
 const labelClass = 'mb-1 block text-xs font-semibold uppercase text-gray-400';
 
-const ReminderRowsEditor = ({ reminders, onChange, endAt }) => {
+const ReminderRowsEditor = ({ reminders, onChange, endAt, productName = '' }) => {
   const updateRow = (id, patch) => onChange(
     reminders.map((row) => row.id === id ? { ...row, ...patch } : row)
   );
@@ -22,6 +27,27 @@ const ReminderRowsEditor = ({ reminders, onChange, endAt }) => {
     if (reminders.length < MAX_RENTAL_REMINDERS) onChange([...reminders, createReminderRow()]);
   };
   const removeRow = (id) => onChange(reminders.filter((row) => row.id !== id));
+  const applyRowTemplate = (row, templateId, details = {}) => updateRow(row.id, {
+    templateId,
+    ...renderStandaloneReminderTemplate(templateId, {
+      machineName: details.templateMachineName || row.templateMachineName || productName,
+      amount: details.templateAmount ?? row.templateAmount,
+    }),
+  });
+  const updateTemplateDetails = (row, patch) => {
+    const details = {
+      templateMachineName: row.templateMachineName || '',
+      templateAmount: row.templateAmount || '',
+      ...patch,
+    };
+    updateRow(row.id, {
+      ...details,
+      ...renderStandaloneReminderTemplate(row.templateId, {
+        machineName: details.templateMachineName || productName,
+        amount: details.templateAmount,
+      }),
+    });
+  };
 
   return (
     <div className="space-y-5">
@@ -44,6 +70,25 @@ const ReminderRowsEditor = ({ reminders, onChange, endAt }) => {
 
             <div className="mt-4 flex flex-wrap gap-5">
               {['email', 'whatsapp'].map((channel) => <label key={channel} className="flex items-center gap-2 text-sm text-gray-200"><input type="checkbox" checked={row.channels[channel]} onChange={() => toggleChannel(row, channel)} />{channel === 'email' ? 'Email' : 'WhatsApp'}</label>)}
+            </div>
+
+            <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <div>
+                <label className={labelClass}>Message template</label>
+                <select aria-label={`Reminder ${index + 1} message template`} value={row.templateId || CUSTOM_MESSAGE_TEMPLATE} onChange={(event) => applyRowTemplate(row, event.target.value)} className={fieldClass}>
+                  {standaloneReminderTemplates.map((template) => <option key={template.id} value={template.id}>{template.label}</option>)}
+                </select>
+              </div>
+              {row.templateId === 'machine-ready-with-amount' && <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className={labelClass}>Machine name</label>
+                  <input aria-label={`Reminder ${index + 1} machine name`} value={row.templateMachineName || ''} onChange={(event) => updateTemplateDetails(row, { templateMachineName: event.target.value })} placeholder={productName || 'Machine name'} className={fieldClass} />
+                </div>
+                <div>
+                  <label className={labelClass}>Amount (₹)</label>
+                  <input aria-label={`Reminder ${index + 1} amount`} type="number" min="0" step="0.01" value={row.templateAmount || ''} onChange={(event) => updateTemplateDetails(row, { templateAmount: event.target.value })} placeholder="0.00" className={fieldClass} />
+                </div>
+              </div>}
             </div>
 
             <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
