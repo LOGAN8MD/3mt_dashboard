@@ -1,4 +1,5 @@
 import React from 'react';
+import { customReminderTimeError, parseCustomReminderTime } from '../utils/standaloneReminderForm';
 import {
   MAX_RENTAL_REMINDERS,
   REMINDER_OFFSET_UNITS,
@@ -16,7 +17,7 @@ import {
 const fieldClass = 'w-full rounded border border-gray-600 bg-gray-900 px-3 py-2 text-white focus:border-blue-500 focus:outline-none';
 const labelClass = 'mb-1 block text-xs font-semibold uppercase text-gray-400';
 
-const ReminderRowsEditor = ({ reminders, onChange, endAt, productName = '' }) => {
+const ReminderRowsEditor = ({ reminders, onChange, endAt, startAt, exactDates = false, productName = '' }) => {
   const updateRow = (id, patch) => onChange(
     reminders.map((row) => row.id === id ? { ...row, ...patch } : row)
   );
@@ -24,7 +25,7 @@ const ReminderRowsEditor = ({ reminders, onChange, endAt, productName = '' }) =>
     channels: { ...row.channels, [channel]: !row.channels[channel] },
   });
   const addRow = () => {
-    if (reminders.length < MAX_RENTAL_REMINDERS) onChange([...reminders, createReminderRow()]);
+    if (reminders.length < MAX_RENTAL_REMINDERS) onChange([...reminders, { ...createReminderRow(), ...(exactDates ? { scheduledAt: '' } : {}) }]);
   };
   const removeRow = (id) => onChange(reminders.filter((row) => row.id !== id));
   const applyRowTemplate = (row, templateId, details = {}) => updateRow(row.id, {
@@ -54,16 +55,20 @@ const ReminderRowsEditor = ({ reminders, onChange, endAt, productName = '' }) =>
       {reminders.map((row, index) => {
         let sendTime = 'Enter a valid offset';
         try {
-          const scheduledAt = calculateReminderTime(endAt, reminderOffsetMinutes(row));
+          const scheduledAt = exactDates ? parseCustomReminderTime(row.scheduledAt) : calculateReminderTime(endAt, reminderOffsetMinutes(row));
           sendTime = scheduledAt ? formatReminderTimeIST(scheduledAt) : 'Select a valid end time';
         } catch { /* validation message is shown by the parent form */ }
 
+        const timeError = exactDates && row.scheduledAt ? customReminderTimeError(row.scheduledAt, startAt, endAt) : '';
         return (
           <fieldset key={row.id} className="border-y border-gray-700 py-5">
             <legend className="px-2 text-sm font-semibold text-white">Reminder {index + 1}</legend>
+            {exactDates && <div className="mb-4"><label className={labelClass}>Send date and time (IST)</label><input aria-label={`Reminder ${index + 1} date and time`} aria-invalid={Boolean(timeError)} type="datetime-local" min={startAt} max={endAt} value={row.scheduledAt || ''} onChange={(event) => updateRow(row.id, { scheduledAt: event.target.value })} className={fieldClass} />{timeError && <p role="alert" className="mt-2 text-sm text-red-300">{timeError}</p>}</div>}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
+              {!exactDates && <>
               <div><label className={labelClass}>Send before end</label><input aria-label={`Reminder ${index + 1} offset`} type="number" min="1" step="1" value={row.offsetValue} onChange={(event) => updateRow(row.id, { offsetValue: event.target.value })} className={fieldClass} /></div>
               <div><label className={labelClass}>Offset unit</label><select aria-label={`Reminder ${index + 1} offset unit`} value={row.offsetUnit} onChange={(event) => updateRow(row.id, { offsetUnit: event.target.value })} className={fieldClass}>{REMINDER_OFFSET_UNITS.map((unit) => <option key={unit.value} value={unit.value}>{unit.label}</option>)}</select></div>
+              </>}
               <button type="button" onClick={() => removeRow(row.id)} className="min-h-10 rounded border border-red-500/60 px-3 py-2 text-sm text-red-300 hover:bg-red-950/30">Remove</button>
             </div>
             <p className="mt-3 text-sm text-blue-300">Scheduled: {sendTime} IST</p>

@@ -46,6 +46,32 @@ test('applies shared bilingual content and builds a standalone plan payload', ()
   }));
 });
 
+test('converts multiple exact IST times into API offsets independent of browser timezone', () => {
+  const form = applySharedContent({ ...baseForm, reminders: [
+    { ...baseForm.reminders[0], scheduledAt: '2026-11-15T12:00' },
+    { ...baseForm.reminders[0], scheduledAt: '2026-11-16T09:00' },
+  ] });
+  const payload = buildStandaloneReminderPayload(form, customer, new Date('2026-11-14T00:00Z'));
+  expect(payload.reminders.map((row) => row.offsetMinutes)).toEqual([1320, 60]);
+});
+
+test.each([
+  ['2026-11-15T09:00', /before the plan start/],
+  ['2026-11-16T10:00', /before the plan end/],
+  ['2026-11-17T10:00', /before the plan end/],
+  ['', /valid reminder date/],
+])('rejects out-of-period or missing exact time %s', (scheduledAt, error) => {
+  const form = applySharedContent({ ...baseForm, reminders: [{ ...baseForm.reminders[0], scheduledAt }] });
+  expect(() => buildStandaloneReminderPayload(form, customer, new Date('2026-11-14T00:00Z'))).toThrow(error);
+});
+
+test('rejects past and duplicate exact times', () => {
+  const row = { ...baseForm.reminders[0], scheduledAt: '2026-11-15T12:00' };
+  const form = applySharedContent({ ...baseForm, reminders: [row, row] });
+  expect(() => buildStandaloneReminderPayload(form, customer, new Date('2026-11-15T07:00Z'))).toThrow(/future/);
+  expect(() => buildStandaloneReminderPayload(form, customer, new Date('2026-11-14T00:00Z'))).toThrow(/unique/);
+});
+
 test('standalone payload keeps product context optional and validates contact channels', () => {
   const form = applySharedContent({ ...baseForm, productId: '' });
   expect(buildStandaloneReminderPayload(form, customer, new Date('2026-11-14T10:00:00.000Z')).productId)

@@ -74,6 +74,9 @@ test('creates a standalone custom reminder plan with optional product context', 
   fireEvent.change(screen.getByLabelText('Shared English message'), { target: { value: 'Please visit the shop.' } });
   fireEvent.change(screen.getByLabelText('Shared Hindi message'), { target: { value: 'कृपया दुकान पर आएं।' } });
   fireEvent.click(screen.getByRole('button', { name: 'Apply to all reminders' }));
+  fireEvent.change(screen.getByLabelText('Schedule start'), { target: { value: '2099-10-25T00:00' } });
+  fireEvent.change(screen.getByLabelText('Schedule end'), { target: { value: '2099-10-27T00:00' } });
+  fireEvent.change(screen.getByLabelText('Reminder 1 date and time'), { target: { value: '2099-10-26T23:00' } });
   fireEvent.click(screen.getByRole('button', { name: 'Create reminder plan' }));
 
   await waitFor(() => expect(api.post).toHaveBeenCalledWith('/api/reminders/plans', expect.objectContaining({
