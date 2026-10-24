@@ -1,8 +1,8 @@
+import { confirmAction } from '../utils/confirmationDialog';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import api from '../utils/axiosInstance';
 import {
-  applySharedContent,
   buildStandaloneReminderPayload,
   createStandaloneReminderForm,
 } from '../utils/standaloneReminderForm';
@@ -115,7 +115,7 @@ const StandaloneReminderForm = () => {
 
   const createPlan = async () => {
     const request = payload();
-    if (!request || !window.confirm(`Create ${request.reminders.length} scheduled reminder${request.reminders.length === 1 ? '' : 's'} for ${selectedCustomer.name}?`)) return;
+    if (!request || !await confirmAction(`Create ${request.reminders.length} scheduled reminder${request.reminders.length === 1 ? '' : 's'} for ${selectedCustomer.name}?${request.startingMessage ? ' The starting message will also be queued now for the selected channels.' : ''}`)) return;
     setBusy('create');
     try {
       const { data } = await api.post('/api/reminders/plans', request);
@@ -161,8 +161,10 @@ const StandaloneReminderForm = () => {
 
       <section className="mt-7 border-t border-gray-700 pt-6" aria-labelledby="shared-message-heading">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div><h3 id="shared-message-heading" className="font-medium text-white">Shared starting message</h3><p className="mt-1 text-sm text-gray-400">Apply this content to every row, then customize individual reminders below.</p></div>
-          <button type="button" onClick={() => change(applySharedContent(form))} className="rounded border border-blue-500 px-4 py-2 text-sm font-semibold text-blue-300">Apply to all reminders</button>
+          <h3 id="shared-message-heading" className="font-medium text-white">Starting message (optional)</h3>
+        </div>
+        <div className="mb-5 flex flex-wrap gap-5">
+          {['email', 'whatsapp'].map((channel) => <label key={channel} className="flex items-center gap-2 text-sm text-gray-200"><input type="checkbox" aria-label={`Starting message ${channel === 'email' ? 'Email' : 'WhatsApp'}`} checked={form.startingChannels[channel]} onChange={(event) => change({ startingChannels: { ...form.startingChannels, [channel]: event.target.checked } })} />{channel === 'email' ? 'Email' : 'WhatsApp'}</label>)}
         </div>
         <div className="mb-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div>
@@ -185,8 +187,8 @@ const StandaloneReminderForm = () => {
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div><label className={labelClass}>English subject (optional)</label><input value={form.sharedSubjectEnglish} maxLength="200" onChange={(event) => change({ sharedSubjectEnglish: event.target.value })} className={fieldClass} /></div>
           <div><label className={labelClass}>Hindi subject (optional)</label><input value={form.sharedSubjectHindi} maxLength="200" onChange={(event) => change({ sharedSubjectHindi: event.target.value })} className={fieldClass} /></div>
-          <div><label className={labelClass}>English message</label><textarea aria-label="Shared English message" rows="4" value={form.sharedBodyEnglish} maxLength="5000" onChange={(event) => change({ sharedBodyEnglish: event.target.value })} className={fieldClass} /></div>
-          <div><label className={labelClass}>Hindi message</label><textarea aria-label="Shared Hindi message" rows="4" value={form.sharedBodyHindi} maxLength="5000" onChange={(event) => change({ sharedBodyHindi: event.target.value })} className={fieldClass} /></div>
+          <div><label className={labelClass}>English message</label><textarea aria-label="Starting English message" rows="4" value={form.sharedBodyEnglish} maxLength="5000" onChange={(event) => change({ sharedBodyEnglish: event.target.value })} className={fieldClass} /></div>
+          <div><label className={labelClass}>Hindi message</label><textarea aria-label="Starting Hindi message" rows="4" value={form.sharedBodyHindi} maxLength="5000" onChange={(event) => change({ sharedBodyHindi: event.target.value })} className={fieldClass} /></div>
         </div>
       </section>
 
@@ -201,6 +203,7 @@ const StandaloneReminderForm = () => {
         <h3 id="plan-preview-heading" className="font-medium text-white">Plan preview</h3>
         <p className="mt-1 text-sm text-gray-400">{selectedCustomer?.name} · {selectedProduct ? productLabel(selectedProduct) : 'No product context'}</p>
         <div className="mt-4 divide-y divide-gray-800">
+          {preview.startingMessage && <p className="py-3 text-sm text-gray-300">Starting message: upon creation · {preview.startingMessage.channels.join(' + ')}</p>}
           {preview.reminders.map((row, index) => <div key={`${row.offsetMinutes}-${index}`} className="grid gap-1 py-3 sm:grid-cols-[8rem_1fr_auto]"><strong className="text-sm">Reminder {index + 1}</strong><span className="text-sm text-gray-300">{formatReminderTimeIST(row.scheduledAt)} IST</span><span className="text-xs uppercase text-blue-300">{row.channels.join(' + ')}</span></div>)}
         </div>
       </section>}

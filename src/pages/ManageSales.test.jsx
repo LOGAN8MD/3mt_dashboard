@@ -1,3 +1,4 @@
+import * as dialogs from '../utils/confirmationDialog';
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import ManageSales from './ManageSales';
@@ -41,7 +42,7 @@ const openSale = async () => {
 };
 
 test('creates a completed machine sale with a partial initial payment', async () => {
-  const confirm = jest.spyOn(window, 'confirm').mockReturnValue(true);
+  const confirm = jest.spyOn(dialogs, 'confirmAction').mockResolvedValue(true);
   render(<ManageSales />);
   fireEvent.click(screen.getByText('Create & edit'));
   await screen.findByText(/Deepak Mishra/);
@@ -67,7 +68,7 @@ test('records an additional payment against the remaining sale balance', async (
 });
 
 test('paid draft cancellation requires and sends explicit refund confirmation', async () => {
-  const confirm = jest.spyOn(window, 'confirm').mockReturnValue(true);
+  const confirm = jest.spyOn(dialogs, 'confirmAction').mockResolvedValue(true);
   await openSale();
   fireEvent.click(screen.getByText('Cancel draft'));
   fireEvent.change(screen.getByLabelText('Required cancellation reason'), { target: { value: 'Customer changed decision' } });
@@ -87,7 +88,7 @@ test('unpaid drafts expose permanent deletion', async () => {
     if (url === '/api/machine-sales') return Promise.resolve({ data: { sales: [unpaidSale], pagination: { page: 1, pages: 1, total: 1 } } });
     return Promise.resolve({ data: unpaidSale });
   });
-  const confirm = jest.spyOn(window, 'confirm').mockReturnValue(true);
+  const confirm = jest.spyOn(dialogs, 'confirmAction').mockResolvedValue(true);
   await openSale();
   fireEvent.click(screen.getByText('Delete unpaid draft'));
   await waitFor(() => expect(api.delete).toHaveBeenCalledWith(`/api/machine-sales/${sale._id}`));

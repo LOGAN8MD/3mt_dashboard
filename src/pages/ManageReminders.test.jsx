@@ -1,3 +1,4 @@
+import * as dialogs from '../utils/confirmationDialog';
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import ManageReminders from './ManageReminders';
@@ -50,7 +51,7 @@ test('email is shown sent while WhatsApp stays ready until explicit admin confir
   const link = await screen.findByText('Open WhatsApp');
   expect(link).toHaveAttribute('href', 'https://wa.me/919876543210?text=test');
   expect(api.post).not.toHaveBeenCalled();
-  const confirm = jest.spyOn(window, 'confirm').mockReturnValue(true);
+  const confirm = jest.spyOn(dialogs, 'confirmAction').mockResolvedValue(true);
   fireEvent.click(screen.getByText('Mark as sent'));
   await waitFor(() => expect(api.post).toHaveBeenCalledWith('/api/reminders/occurrences/1/whatsapp-sent', { confirmed: true }));
   confirm.mockRestore();

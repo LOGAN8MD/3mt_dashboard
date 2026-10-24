@@ -30,25 +30,29 @@ export const createStandaloneReminderForm = (dateInput) => ({
   sharedSubjectHindi: '',
   sharedBodyEnglish: '',
   sharedBodyHindi: '',
+  startingChannels: { email: true, whatsapp: true },
   reminders: [{ ...createReminderRow(), scheduledAt: '' }],
   submissionKey: createSubmissionKey(),
 });
 
-export const applySharedContent = (form) => ({
-  ...form,
-  reminders: form.reminders.map((row) => ({
-    ...row,
-    subjectEnglish: form.sharedSubjectEnglish,
-    subjectHindi: form.sharedSubjectHindi,
-    bodyEnglish: form.sharedBodyEnglish,
-    bodyHindi: form.sharedBodyHindi,
-    templateId: 'custom',
-    templateMachineName: '',
-    templateAmount: '',
-  })),
-});
+export const buildStartingMessage = (form, customer) => {
+  const content = Object.fromEntries(['subjectEnglish', 'subjectHindi', 'bodyEnglish', 'bodyHindi'].map((key) => [
+    key, String(form[`shared${key[0].toUpperCase()}${key.slice(1)}`] || '').trim(),
+  ]));
+  if (!Object.values(content).some(Boolean)) return undefined;
+  if (!content.bodyEnglish || !content.bodyHindi) throw new Error('Starting message: English and Hindi messages are both required.');
+  if (content.subjectEnglish.length > 200 || content.subjectHindi.length > 200 || content.bodyEnglish.length > 5000 || content.bodyHindi.length > 5000) {
+    throw new Error('Starting message exceeds the subject or message length limit.');
+  }
+  const channels = ['email', 'whatsapp'].filter((channel) => form.startingChannels?.[channel]);
+  if (!channels.length) throw new Error('Starting message: select Email or WhatsApp.');
+  if (channels.includes('email') && !customer?.email?.trim()) throw new Error('Starting message: customer email is missing.');
+  if (channels.includes('whatsapp') && !customer?.phone?.trim()) throw new Error('Starting message: customer WhatsApp number is missing.');
+  return { channels, content };
+};
 
 export const buildStandaloneReminderPayload = (form, customer, now = new Date()) => {
+  const startingMessage = buildStartingMessage(form, customer);
   const startsAt = parseCustomReminderTime(form.startAt);
   const endsAt = parseCustomReminderTime(form.endAt);
   if (!Number.isFinite(startsAt.getTime()) || !Number.isFinite(endsAt.getTime()) || endsAt <= startsAt) {
@@ -76,6 +80,7 @@ export const buildStandaloneReminderPayload = (form, customer, now = new Date())
     startAt: form.startAt,
     endAt: form.endAt,
     reminders: reminderSettings.reminders,
+    ...(startingMessage ? { startingMessage } : {}),
     submissionKey: form.submissionKey,
   };
 };

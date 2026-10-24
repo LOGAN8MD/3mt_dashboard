@@ -1,3 +1,4 @@
+import { confirmAction } from '../utils/confirmationDialog';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import api from '../utils/axiosInstance';
@@ -168,7 +169,7 @@ const RentalManagementPanel = () => {
     const payload = prepareReturnPayload();
     if (!payload) return;
     if (!returnPreview) return toast.error('Preview the settlement before confirming the return');
-    if (!window.confirm('Confirm the physical return and release this machine as available?')) return;
+    if (!await confirmAction('Confirm the physical return and release this machine as available?')) return;
     setBusy(true);
     try {
       await api.post(`/api/rentals/${selected._id}/return`, payload);
@@ -179,7 +180,7 @@ const RentalManagementPanel = () => {
 
   const submitCancellation = async () => {
     if (!cancelReason.trim()) return toast.error('Cancellation reason is required');
-    if (!window.confirm('Cancel this rental? Active or overdue machines will be released.')) return;
+    if (!await confirmAction('Cancel this rental? Active or overdue machines will be released.')) return;
     setBusy(true);
     try {
       await api.post(`/api/rentals/${selected._id}/cancel`, { reason: cancelReason.trim() });

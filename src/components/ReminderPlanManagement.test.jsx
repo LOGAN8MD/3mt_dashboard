@@ -1,3 +1,4 @@
+import * as dialogs from '../utils/confirmationDialog';
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import ReminderPlanManagement from './ReminderPlanManagement';
@@ -42,7 +43,7 @@ test('lists plans, shows independent delivery detail, and pauses an active plan'
 });
 
 test('cancels one unsent occurrence without cancelling the plan', async () => {
-  const prompt = jest.spyOn(window, 'prompt').mockReturnValue('Customer requested cancellation');
+  const prompt = jest.spyOn(dialogs, 'requestReason').mockResolvedValue('Customer requested cancellation');
   render(<ReminderPlanManagement />);
   await screen.findByText('RPL-TEST-1');
   fireEvent.click(screen.getByRole('button', { name: 'Details' }));

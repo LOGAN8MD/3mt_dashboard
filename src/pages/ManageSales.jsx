@@ -1,3 +1,4 @@
+import { confirmAction } from '../utils/confirmationDialog';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import api from '../utils/axiosInstance';
@@ -113,7 +114,7 @@ const ManageSales = () => {
     const question = completing
       ? 'Complete this sale now? The selected machine will be marked Sold.'
       : editingId ? 'Save changes to this sale draft?' : 'Save this sale as an editable draft?';
-    if (!window.confirm(question)) return;
+    if (!await confirmAction(question)) return;
     setBusy(nextStatus);
     try {
       if (editingId) {
@@ -173,7 +174,7 @@ const ManageSales = () => {
   };
 
   const completeDraft = async () => {
-    if (!window.confirm('Complete this sale? The machine will be marked Sold and cannot be rented or sold again.')) return;
+    if (!await confirmAction('Complete this sale? The machine will be marked Sold and cannot be rented or sold again.')) return;
     setBusy('complete');
     try {
       await api.post(`/api/machine-sales/${selected._id}/complete`, { soldAt: new Date().toISOString() });
@@ -198,7 +199,7 @@ const ManageSales = () => {
   const cancelDraft = async () => {
     if (!cancelReason.trim()) return toast.error('Cancellation reason is required');
     if (selected.paymentsReceivedPaise > 0 && !refundConfirmed) return toast.error('Confirm that the received payment has been refunded');
-    if (!window.confirm('Cancel this sale draft and preserve its history?')) return;
+    if (!await confirmAction('Cancel this sale draft and preserve its history?')) return;
     setBusy('cancel');
     try {
       await api.post(`/api/machine-sales/${selected._id}/cancel`, {
@@ -211,7 +212,7 @@ const ManageSales = () => {
   };
 
   const deleteDraft = async () => {
-    if (!window.confirm('Permanently delete this unpaid sale draft?')) return;
+    if (!await confirmAction('Permanently delete this unpaid sale draft?')) return;
     setBusy('delete');
     try {
       await api.delete(`/api/machine-sales/${selected._id}`);

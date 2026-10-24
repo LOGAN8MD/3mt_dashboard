@@ -1,3 +1,4 @@
+import { confirmAction, requestReason } from '../utils/confirmationDialog';
 import React, { useCallback, useEffect, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import api from '../utils/axiosInstance';
@@ -94,14 +95,14 @@ const ReminderPlanManagement = ({ fixedPlanType = '', rentalId = '', embedded = 
     }
   };
 
-  const cancelPlan = () => {
-    const reason = window.prompt('Why are you cancelling this reminder plan?');
+  const cancelPlan = async () => {
+    const reason = await requestReason('Why are you cancelling this reminder plan?');
     if (!reason?.trim()) return;
     planAction('cancel', { reason: reason.trim() });
   };
 
   const cancelOccurrence = async (occurrence) => {
-    const reason = window.prompt('Why are you cancelling this reminder?');
+    const reason = await requestReason('Why are you cancelling this reminder?');
     if (!reason?.trim()) return;
     setBusy(occurrence._id);
     try {
@@ -132,7 +133,7 @@ const ReminderPlanManagement = ({ fixedPlanType = '', rentalId = '', embedded = 
       toast.error(validationError.message);
       return;
     }
-    if (!window.confirm('Replace the future unsent reminders with this schedule? Sent history will be preserved.')) return;
+    if (!await confirmAction('Replace the future unsent reminders with this schedule? Sent history will be preserved.')) return;
     setBusy('edit');
     try {
       await api.patch(`/api/reminders/plans/${detail._id}`, payload);

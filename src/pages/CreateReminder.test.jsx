@@ -1,3 +1,4 @@
+import * as dialogs from '../utils/confirmationDialog';
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import CreateReminder from './CreateReminder';
@@ -63,7 +64,7 @@ test('creates a standalone custom reminder plan with optional product context', 
     ? [{ _id: 'customer-1', name: 'Deepak Mishra', email: 'deepak@example.com', phone: '9876543210' }]
     : [{ _id: 'product-1', name: 'Bosch Drill', brand: 'BOSCH', model: 'D1' }] }));
   api.post.mockResolvedValue({ data: { planCode: 'RPL-TEST-1', reminders: [] } });
-  const confirm = jest.spyOn(window, 'confirm').mockReturnValue(true);
+  const confirm = jest.spyOn(dialogs, 'confirmAction').mockResolvedValue(true);
   render(<CreateReminder />);
 
   expect(screen.getByRole('heading', { name: 'Custom Message' })).toBeInTheDocument();
@@ -71,9 +72,11 @@ test('creates a standalone custom reminder plan with optional product context', 
   await screen.findByRole('option', { name: /Deepak Mishra/ });
   fireEvent.change(screen.getByLabelText('Customer'), { target: { value: 'customer-1' } });
   fireEvent.change(screen.getByLabelText('Product or machine context (optional)'), { target: { value: 'product-1' } });
-  fireEvent.change(screen.getByLabelText('Shared English message'), { target: { value: 'Please visit the shop.' } });
-  fireEvent.change(screen.getByLabelText('Shared Hindi message'), { target: { value: 'कृपया दुकान पर आएं।' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Apply to all reminders' }));
+  expect(screen.queryByRole('button', { name: 'Apply to all reminders' })).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Starting English message'), { target: { value: 'Welcome!' } });
+  fireEvent.change(screen.getByLabelText('Starting Hindi message'), { target: { value: 'नमस्ते!' } });
+  fireEvent.change(screen.getByLabelText('Reminder 1 English message'), { target: { value: 'Please visit the shop.' } });
+  fireEvent.change(screen.getByLabelText('Reminder 1 Hindi message'), { target: { value: 'कृपया दुकान पर आएं।' } });
   fireEvent.change(screen.getByLabelText('Schedule start'), { target: { value: '2099-10-25T00:00' } });
   fireEvent.change(screen.getByLabelText('Schedule end'), { target: { value: '2099-10-27T00:00' } });
   fireEvent.change(screen.getByLabelText('Reminder 1 date and time'), { target: { value: '2099-10-26T23:00' } });
@@ -83,6 +86,7 @@ test('creates a standalone custom reminder plan with optional product context', 
     customerId: 'customer-1',
     productId: 'product-1',
     reminders: [expect.objectContaining({ offsetMinutes: 60 })],
+    startingMessage: expect.objectContaining({ content: expect.objectContaining({ bodyEnglish: 'Welcome!' }) }),
   })));
   expect(await screen.findByText(/RPL-TEST-1/)).toBeInTheDocument();
   expect(screen.getByRole('link', { name: 'View reminder history' })).toHaveAttribute('href', '/admin/reminder-logs/custom');

@@ -1,3 +1,4 @@
+import { confirmAction } from '../utils/confirmationDialog';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-hot-toast';
 import RentalManagementPanel from './RentalManagementPanel';
@@ -151,7 +152,7 @@ const RentalWorkspace = ({ fixedWorkspace = '', showHeader = true }) => {
     const message = activeNow
       ? 'Activate this rental now? The machine will be marked On Rent and customer reminders will be created.'
       : editingId ? 'Save changes to this draft?' : 'Save this rental as an editable draft?';
-    if (!window.confirm(message)) return;
+    if (!await confirmAction(message)) return;
     setBusy(status);
     try {
       if (editingId) {
@@ -171,7 +172,7 @@ const RentalWorkspace = ({ fixedWorkspace = '', showHeader = true }) => {
   };
 
   const activateDraft = async (draft) => {
-    if (!window.confirm(`Activate ${draft.rentalCode}? The machine will be marked On Rent and customer reminders will be created.`)) return;
+    if (!await confirmAction(`Activate ${draft.rentalCode}? The machine will be marked On Rent and customer reminders will be created.`)) return;
     setBusy(draft._id);
     try {
       await api.post(`/api/rentals/${draft._id}/activate`);
@@ -213,7 +214,7 @@ const RentalWorkspace = ({ fixedWorkspace = '', showHeader = true }) => {
   };
 
   const deleteDraft = async (draft) => {
-    if (!window.confirm(`Delete draft ${draft.rentalCode}? This cannot be undone.`)) return;
+    if (!await confirmAction(`Delete draft ${draft.rentalCode}? This cannot be undone.`)) return;
     setBusy(draft._id);
     try {
       await api.delete(`/api/rentals/${draft._id}`);

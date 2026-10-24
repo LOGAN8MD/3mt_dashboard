@@ -1,3 +1,4 @@
+import * as dialogs from '../utils/confirmationDialog';
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import RentalManagementPanel from './RentalManagementPanel';
@@ -65,7 +66,7 @@ test('loads rental-specific reminder plan controls without changing the rental c
 });
 
 test('previews the authoritative settlement before confirming a return', async () => {
-  const confirm = jest.spyOn(window, 'confirm').mockReturnValue(true);
+  const confirm = jest.spyOn(dialogs, 'confirmAction').mockResolvedValue(true);
   await openRental();
   fireEvent.click(screen.getByText('Record return'));
   fireEvent.change(screen.getByLabelText('Deposit to apply (₹)'), { target: { value: '500' } });
@@ -87,7 +88,7 @@ test('records an additional rental payment in paise', async () => {
 });
 
 test('requires and sends a cancellation reason', async () => {
-  const confirm = jest.spyOn(window, 'confirm').mockReturnValue(true);
+  const confirm = jest.spyOn(dialogs, 'confirmAction').mockResolvedValue(true);
   await openRental();
   fireEvent.click(screen.getByText('Cancel rental'));
   fireEvent.change(screen.getByLabelText('Required cancellation reason'), { target: { value: 'Customer cancelled before collection' } });

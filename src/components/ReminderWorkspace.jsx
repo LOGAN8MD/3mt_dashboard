@@ -1,3 +1,4 @@
+import { confirmAction } from '../utils/confirmationDialog';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
@@ -143,8 +144,8 @@ export const ReminderDeliveryHistory = ({ scope = '' }) => {
         {share ? <div className="whitespace-pre-wrap break-words text-sm leading-relaxed">{share.message}</div> : <div className="grid grid-cols-1 gap-5 sm:grid-cols-2"><div className="whitespace-pre-wrap break-words text-sm leading-relaxed"><strong className="mb-2 block text-white">English</strong>{preview.contentSnapshot.bodyEnglish}</div><div className="whitespace-pre-wrap break-words text-sm leading-relaxed"><strong className="mb-2 block text-white">Hindi</strong>{preview.contentSnapshot.bodyHindi}</div></div>}
         {share && <div className="flex flex-wrap gap-3 mt-6">
           <a href={share.url} target="_blank" rel="noopener noreferrer" className="bg-green-700 rounded px-4 py-2 text-sm">Open WhatsApp</a>
-          <button disabled={busy === preview._id} className="border border-green-500 rounded px-4 py-2 text-sm disabled:opacity-50" onClick={() => {
-            if (!window.confirm('Have you sent this message to the customer in WhatsApp?')) return;
+          <button disabled={busy === preview._id} className="border border-green-500 rounded px-4 py-2 text-sm disabled:opacity-50" onClick={async () => {
+            if (!await confirmAction('Have you sent this message to the customer in WhatsApp?')) return;
             action(preview._id, async () => {
               await api.post(`/api/reminders/occurrences/${preview._id}/whatsapp-sent`, { confirmed: true });
               setPreview(null); toast.success('WhatsApp marked as sent'); await load();

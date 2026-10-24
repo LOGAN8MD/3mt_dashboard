@@ -1,3 +1,4 @@
+import * as dialogs from '../utils/confirmationDialog';
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import ManageRentals from './ManageRentals';
@@ -51,7 +52,7 @@ test('loads eligible rental setup data and calculates a server quote', async () 
 });
 
 test('confirmation creates an active rental while draft action preserves draft status', async () => {
-  const confirm = jest.spyOn(window, 'confirm').mockReturnValue(true);
+  const confirm = jest.spyOn(dialogs, 'confirmAction').mockResolvedValue(true);
   render(<ManageRentals />);
   fireEvent.click(screen.getByText('Create & drafts'));
   await screen.findByText(/Deepak Mishra/);
@@ -63,7 +64,7 @@ test('confirmation creates an active rental while draft action preserves draft s
 });
 
 test('submits custom bilingual reminder rows with the rental', async () => {
-  const confirm = jest.spyOn(window, 'confirm').mockReturnValue(true);
+  const confirm = jest.spyOn(dialogs, 'confirmAction').mockResolvedValue(true);
   render(<ManageRentals />);
   fireEvent.click(screen.getByText('Create & drafts'));
   await screen.findByText(/Deepak Mishra/);
