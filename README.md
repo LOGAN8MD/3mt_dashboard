@@ -54,6 +54,8 @@ For a due WhatsApp reminder, choose **Share on WhatsApp**, inspect the prepared 
 
 Automatic email requires backend automation configuration and the external cron wakeup described in `3mt_Server/README.md`. Email **Sent** means accepted by Brevo. **Needs review** means the delivery result was uncertain and automatic retry is withheld to avoid duplicates. Sale and custom reminder creation screens remain separate staged work.
 
+The production cron, automatic Brevo email, and admin-confirmed manual WhatsApp flow were verified on 24 October 2026. Use `../3mt_Server/RENTAL_REMINDER_VERIFICATION.md` for the full release checklist, including extension replacement, cancellation/return cleanup, overdue settlement, restart recovery, and duplicate protection.
+
 # Rental Creation and Management (Tasks 14-15)
 
 Admins can open **Rentals** at `/admin/rentals`. The page loads customer accounts and eligible available second-hand machines offered for rent, copies the machine's listed rate/period/deposit as editable starting values, accepts India-local handover and return times, and requests the authoritative quote from the backend.
