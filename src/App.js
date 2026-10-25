@@ -54,6 +54,7 @@ const App = () => {
               <Route path="/admin/manage-reminders/:mode" element={<ManageReminders />} />
               <Route path="/admin/reminder-logs" element={<Navigate to="/admin/reminder-logs/rental" replace />} />
               <Route path="/admin/reminder-logs/:mode" element={<ReminderLogs />} />
+              <Route path="/admin/reminder-logs/:mode/:groupType/:groupId" element={<ReminderLogs />} />
               <Route path="/admin/reminders" element={<LegacyRemindersRedirect />} />
               <Route path="/admin/rentals" element={<LegacyRentalsRedirect />} />
               <Route path="/admin/sales" element={<ManageSales />} />

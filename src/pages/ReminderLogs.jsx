@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, Navigate, NavLink, useParams } from 'react-router-dom';
-import { ReminderDeliveryHistory } from '../components/ReminderWorkspace';
+import GroupedReminderLogs from '../components/GroupedReminderLogs';
+import ReminderLogGroupDetail from '../components/ReminderLogGroupDetail';
 
 const modes = [
   { id: 'rental', label: 'Rental Machines' },
@@ -13,7 +14,7 @@ const modeLinkClass = ({ isActive }) =>
   }`;
 
 const ReminderLogs = () => {
-  const { mode } = useParams();
+  const { mode, groupType, groupId } = useParams();
   if (!modes.some((item) => item.id === mode)) {
     return <Navigate to="/admin/reminder-logs/rental" replace />;
   }
@@ -37,7 +38,9 @@ const ReminderLogs = () => {
     </nav>
 
     <section className="border-t border-gray-700 pt-6" aria-label={rentalMode ? 'Rental reminder logs' : 'Custom message logs'}>
-      <ReminderDeliveryHistory scope={scope} />
+      {groupType && groupId
+        ? <ReminderLogGroupDetail scope={scope} mode={mode} groupType={groupType} groupId={groupId} />
+        : <GroupedReminderLogs scope={scope} mode={mode} />}
     </section>
   </div>;
 };
